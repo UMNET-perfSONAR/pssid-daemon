@@ -36,8 +36,7 @@
       {
         "name": "match_2",
         "batches": [
-          "batch_http_google",
-          "batch_http_google_copy"
+          "batch_http_google"
         ],
         "hosts": [
           "198.111.226.182"
@@ -112,24 +111,9 @@
           "Mwireless"
         ],
         "schedules": [
-          "once_a_minute"
-        ],
-        "jobs": [
-          "job_http_google"
-        ],
-        "archivers": [
-          "syslog"
-        ]
-      },
-      {
-        "name": "batch_http_google_copy",
-        "priority": 2,
-        "test_interface": "wlan0",
-        "ssid_profiles": [
-          "Mwireless"
-        ],
-        "schedules": [
-          "once_a_minute"
+          
+          "every_two_minutes",
+          "every_three_minute"
         ],
         "jobs": [
           "job_http_google"

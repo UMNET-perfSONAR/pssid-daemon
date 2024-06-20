@@ -65,18 +65,18 @@ def find_matching_regex(regexes, hostname):
             print("Regex matching error.")
     return False
 
-def run_batch(batch):
-    print(f"Running batch: {batch['name']}")
+def run_batch(s, batch, data, cron_expression):
+    print('\n')
+    print(f"Running batch at {datetime.datetime.now()} of batch {batch['name']} with cron_expression {cron_expression}")  #  print( time stamp + batch name)
+    schedule_batch(s, batch, data)
     
 
 def schedule_batch(s, batch, data):
 
-
-    current_time = datetime.datetime.now().timestamp()
-    #current_time = time.time()
+    #print("current-time--marker-01: ", datetime.datetime.now())
 
     earliest_next_run_time = None
-    print("schedule_batch at: ", current_time, "type of:", type(current_time))
+    #print("schedule_batch at: ", current_time, "type of:", type(current_time))
     for schedule_name in batch["schedules"]:
         cron_expression = None
 
@@ -90,23 +90,32 @@ def schedule_batch(s, batch, data):
             print(f"No cron expression found for schedule: {schedule_name}")
             continue
         
+        print('cron-expression: ', cron_expression)
+        
+        
         # cacluate the next run time
+        current_time = datetime.datetime.now()
+        #print('current-time--marker-02: ', current_time)
+
         cron = croniter(cron_expression, current_time)
-        #next_run_time = cron.get_next(datetime.datetime)
         next_run_time = cron.get_next(datetime.datetime)
-        print("type of next_run_time: ", type(next_run_time))
+        # -debug-print("type of next_run_time: ", type(next_run_time))
+        print("NEXT_run_time:          ", next_run_time)
 
         # determine the earliest next run time for the batch
         if earliest_next_run_time is None or next_run_time < earliest_next_run_time:
             earliest_next_run_time = next_run_time
+            earliest_cron_expression = schedule['repeat']
+
 
     # add the batch to the priority queue with the earliest next run time
-#        if earliest_next_run_time is not None:
     if earliest_next_run_time is None:
         print("warning")
     else:
-        #print("check intial if is empty: ", priority_queue.is_empty())
-        s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (batch,))
+        print('earliest_next_run_time: ', earliest_next_run_time)
+        print('\n')
+        s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (s, batch, data, earliest_cron_expression))
+       
     
     
 
@@ -116,7 +125,7 @@ def schedule_batch(s, batch, data):
 def initilize_batches(batch_name_list, data, s):
 
     if not batch_name_list:
-        print("batch_name_list is empty.")
+        # print("batch_name_list is empty.")
         return
     
     
@@ -186,9 +195,7 @@ def process_gui_conf(data, s, metadata_set, hostname):
     for host in data["hosts"]:
         if host["name"] == hostname:
             host_match = host["name"]
-            # add batches func
-            # add metadata 
-            # add_batches(host["batches"], priority_queue)
+
             initilize_batches(host["batches"], data, s)
 
             add_metadata(host["data"].items(), metadata_set, host["name"])
@@ -365,9 +372,10 @@ def main():
     s , metadata_set = process_gui_conf(stuff, s, metadata_set, hostname)
 
     print_metadat_set(metadata_set)
+    print('\n')
     # print_priority_queue(priority_queue)
 
-    print(s.queue)
+    # print(s.queue)
     s.run()
     # while True:
     #     if not pq.is_empty():
