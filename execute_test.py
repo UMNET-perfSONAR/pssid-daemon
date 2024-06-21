@@ -1,3 +1,4 @@
+# su to root first 
 
 import subprocess
 import time
@@ -12,7 +13,7 @@ def execute_test():  # execute_batches()
         # print("Existing namespace deleted.")
 
         # create namespace pssid using command line
-        create_namespace_command = f"sudo ip netns add pssid"
+        create_namespace_command = f"ip netns add pssid"
         subprocess.run(create_namespace_command, shell=True, check=True)
         print('>>>>>>>>>>>> create namespace pssid\n')
 
@@ -29,9 +30,10 @@ def execute_test():  # execute_batches()
         #     print("Namespace pssid already exists. Reusing it.")
 
         # bond interface with namespace pssid using command line
-        bond_interface_namespace_command = f"sudo iw phy0 set netns name pssid"
+        print('>>>>>>>>>>>> bond interface to namespace\n')
+        bond_interface_namespace_command = f"iw phy0 set netns name pssid"
         subprocess.run(bond_interface_namespace_command, shell=True, check=True)
-        print('>>>>>>>>>>>> bond interface with namespace\n')
+       
 
         # open a namespace bash 
         # execute_namespace_bash_command = f"sudo ip netns exec pssid bash"
@@ -40,35 +42,45 @@ def execute_test():  # execute_batches()
 
         # call layer 2 tool using command line
         # layer2_tool_command = f"sudo ip netns exec pssid /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/{ssid}.conf -i wlan0"
-        build_layer2_tool_command = f"sudo ip netns exec pssid /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_M.conf -i wlan0"
+        print('>>>>>>>>>>>> build layer 2')
+        build_layer2_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_M.conf -i wlan0"
         subprocess.run(build_layer2_tool_command, shell=True, check=True)
-        print('>>>>>>>>>>>> build layer 2\n')
+        
 
         # call layer 3 tool using command line
-        build_layer3_tool_command = f"sudo ip netns exec pssid /usr/lib/exec/pssid/pssid-dhcp -i wlan0"
+        print('\n>>>>>>>>>>>> build layer 3')
+        build_layer3_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-dhcp -i wlan0"
         subprocess.run(build_layer3_tool_command, shell=True, check=True)
-        print('>>>>>>>>>>>> build layer 3\n')
+        
 
         # simulation a test
-        test_simulation_command = f"wget -P ~/dianluhe www.goog.com"
+        print('\n>>>>>>>>>>>> run wget test')
+        test_simulation_command = f"wget -P /home/dianluhe www.google.com"
         subprocess.run(test_simulation_command, shell=True, check=True)
-        print('>>>>>>>>>>>> run test\n')
+        
 
         # Sleep for a specified period
-        sleep_duration = 120  # Time to sleep in seconds
-        print(f">>>>>>>>>>>> Sleeping for {sleep_duration} seconds...")
+        sleep_duration = 30  # Time to sleep in seconds
+        print(f">>>>>>>>>>>> sleeping for {sleep_duration} seconds...")
         time.sleep(sleep_duration)
         print('>>>>>>>>>>>> done sleeping \n')
 
         # teardown l3
-        teardown_layer3_tool_command = f"sudo ip netns exec pssid /usr/lib/exec/pssid/pssid-dhcp -i wlan0 -d"
+        print('\n>>>>>>>>>>>> teardown layer 3')
+        teardown_layer3_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-dhcp -i wlan0 -d"
         subprocess.run(teardown_layer3_tool_command, shell=True, check=True)
-        print('>>>>>>>>>>>> teardown layer 3')
+        
         
         # teardown l2
+        print('\n>>>>>>>>>>>> teardown layer 2')
         teardown_layer2_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_M.conf -i wlan0 -d"
         subprocess.run(teardown_layer2_tool_command, shell=True, check=True)
-        print('>>>>>>>>>>>> teardown layer 2')
+        
+
+         # create namespace pssid using command line
+        create_namespace_command = f"ip netns delete pssid"
+        subprocess.run(create_namespace_command, shell=True, check=True)
+        print('\n>>>>>>>>>>>> delete namespace pssid\n')
 
     except subprocess.CalledProcessError as e:
         print(f"Error executing command for SSID Mwireless: {e}")
