@@ -1,3 +1,6 @@
+# first activate the virtual environment
+# python3 pssid_daemon_dev.py --hostname "198.111.226.184"
+
 import json
 import socket
 import re
@@ -15,36 +18,15 @@ from croniter import croniter
 class Daemon:
     def __init__(self):
         pass
-        # self.pq = queue.PriorityQueue()
 
-    # def __iter__(self):
-    #     # creates a copy of the priority queue items
-    #     items = []
-    #     while not self.pq.empty():
-    #         items.append(self.pq.get())
-    #     # Put items back into the priority queue
-    #     for item in items:
-    #         self.pq.put(item)
-    #     return iter(items)
 
-    # def put(self, job, next_run_time, priority, interval):
-    #     self.pq.put((priority, next_run_time, job, interval))
-    # def put(self, batch):
-    #     self.pq.put(batch)
-
-    # def put(self, next_run_time, priority, batch):
-    #     self.pq.put((next_run_time, priority, batch))
-
-    # def get(self):
-    #     return self.pq.get()
-
-    # def is_empty(self):
-    #     return self.pq.empty()
 
 def load_json(filename):
     with open(filename, 'r', encoding="utf-8") as f:
         return json.load(f)
-    
+
+
+
 # get device information
 def get_hostname():
     try:
@@ -54,29 +36,27 @@ def get_hostname():
         print("Failed to obtain hostname")
 
 
+
 # find matching regex
 def find_matching_regex(regexes, hostname):
     for regex in regexes:
         try:
-            #print("regex",regex,"hostname",hostname)
             if re.match(regex, hostname) is not None:
                 return True
         except re.error:
             print("Regex matching error.")
     return False
 
+
+
 def run_batch(s, batch, data, cron_expression):
     print('\n')
-    print(f"Running batch at {datetime.datetime.now()} of batch {batch['name']} with cron_expression {cron_expression}")  #  print( time stamp + batch name)
+    print(f"Running batch at {datetime.datetime.now()} of batch {batch['name']} with cron_expression {cron_expression}") 
     schedule_batch(s, batch, data)
     
 
 def schedule_batch(s, batch, data):
-
-    #print("current-time--marker-01: ", datetime.datetime.now())
-
     earliest_next_run_time = None
-    #print("schedule_batch at: ", current_time, "type of:", type(current_time))
     for schedule_name in batch["schedules"]:
         cron_expression = None
 
@@ -90,38 +70,32 @@ def schedule_batch(s, batch, data):
             print(f"No cron expression found for schedule: {schedule_name}")
             continue
         
-        print('cron-expression: ', cron_expression)
-        
-        
+        print('cron-expression: ', cron_expression) # for debugging
+
         # cacluate the next run time
         current_time = datetime.datetime.now()
         #print('current-time--marker-02: ', current_time)
 
         cron = croniter(cron_expression, current_time)
         next_run_time = cron.get_next(datetime.datetime)
-        # -debug-print("type of next_run_time: ", type(next_run_time))
-        print("NEXT_run_time:          ", next_run_time)
+        print("NEXT_run_time:          ", next_run_time) # for debugging
 
         # determine the earliest next run time for the batch
         if earliest_next_run_time is None or next_run_time < earliest_next_run_time:
             earliest_next_run_time = next_run_time
             earliest_cron_expression = schedule['repeat']
 
-
     # add the batch to the priority queue with the earliest next run time
     if earliest_next_run_time is None:
-        print("warning")
+        print("Warning: no batch is scheduled at this moment")
     else:
         print('earliest_next_run_time: ', earliest_next_run_time)
-        print('\n')
+        print('\n') # for debugging
         s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (s, batch, data, earliest_cron_expression))
        
     
     
-
-
 # add batches
-# def add_batches(batches, priority_queue):
 def initilize_batches(batch_name_list, data, s):
 
     if not batch_name_list:
@@ -141,43 +115,6 @@ def initilize_batches(batch_name_list, data, s):
         schedule_batch(s, batch, data)
             
 
-# $ abstract into a func
-#         current_time = datetime.datetime.now()
-#         earliest_next_run_time = None
-
-#         for schedule_name in batch["schedules"]:
-#             cron_expression = None
-
-#             # find the cron expression for the schedule
-#             for schedule in data['schedules']:
-#                 if schedule['name'] == schedule_name:
-#                     cron_expression = schedule['repeat']
-#                     break
-
-#             if not cron_expression:
-#                 print(f"No cron expression found for schedule: {schedule_name}")
-#                 continue
-            
-#             # cacluate the next run time
-#             cron = croniter(cron_expression, current_time)
-#             next_run_time = cron.get_next(datetime.datetime)
-
-#             # determine the earliest next run time for the batch
-#             if earliest_next_run_time is None or next_run_time < earliest_next_run_time:
-#                 earliest_next_run_time = next_run_time
-
-#         # add the batch to the priority queue with the earliest next run time
-# #        if earliest_next_run_time is not None:
-#         if earliest_next_run_time is None:
-#             print("warning")
-#             continue
-
-#             #print("check intial if is empty: ", priority_queue.is_empty())
-#         priority_queue.put(earliest_next_run_time, batch["priority"], batch)
-           
-
-
-
 
 # add metadata
 def add_metadata(metadata_list, metadata_set, origin):
@@ -187,17 +124,14 @@ def add_metadata(metadata_list, metadata_set, origin):
             metadata_set.add((lhs, rhs, origin))
             existing_lhs.add(lhs) # update the lhs
 
+
+
 def process_gui_conf(data, s, metadata_set, hostname):
-    # print("func called")
-    # hostname = get_hostname()
-    # hostname = "198.111.226.182"
     host_match = None
     for host in data["hosts"]:
         if host["name"] == hostname:
             host_match = host["name"]
-
             initilize_batches(host["batches"], data, s)
-
             add_metadata(host["data"].items(), metadata_set, host["name"])
             
     # syslog warning if no match
@@ -209,16 +143,13 @@ def process_gui_conf(data, s, metadata_set, hostname):
 
     # check host groups for further matches
     for group in data["host_groups"]:
-        # if host_match["name"] in group["hosts"] or find_matching_regex(group["hosts_regex"], host_match):
-        #print("the result is: ", find_matching_regex(group["hosts_regex"], host_match))
-
         if host in group["hosts"] or find_matching_regex(group["hosts_regex"], host_match):
-            # add_batches(group["batches"], priority_queue)
             initilize_batches(group["batches"], data, s)
-
             add_metadata(group["data"].items(), metadata_set, group["name"])
 
     return s, metadata_set
+
+
 
 def print_metadat_set(metadata_set):
     print("**************************************")
@@ -230,53 +161,28 @@ def print_metadat_set(metadata_set):
     print("**************************************")
 
 
-def print_priority_queue(s):
-    for item in s:
-        print(item)
+
+def execute_test(test_name):
+    print(f"Executing test: {test_name}")
+    # Split the test name to get the command and arguments
+    test_args = test_name.split()
+    pscheduler_command = ["pscheduler"] + test_args
+    
+    try:
+        # Run the pscheduler command and capture the output
+        result = subprocess.run(pscheduler_command, capture_output=True, text=True)
+        # print should go to syslog
+        if result.returncode == 0:
+            print(f"Test {test_name} succeeded:\n{result.stdout}")
+            return True
+        else:
+            print(f"Test {test_name} failed:\n{result.stderr}")
+            return False
+    except Exception as e:
+        print(f"Error executing test {test_name}: {e}")
+        return False
     
 
-
-    
-
-# process schedule$$
-# def process_batches(batches):
-#     pq = SchedulePriorityQueue()
-#     for batch in batches:
-#         priority = batch['priority']
-#         ssid_profiles = batch['ssid_profiles']
-#         for schedule in batch['schedules']:
-#             if "every_1_min" in schedule:
-#                 interval = 60
-#             elif "every_5_min" in schedule:
-#                 interval = 300
-#             elif "every_10_min" in schedule:
-#                 interval = 600
-#             # Add more conditions for other schedules if necessary
-#             next_run_time = time.time() + interval
-#             for job in batch['jobs']:
-#                 pq.put((job, ssid_profiles, batch['name']), next_run_time, priority, interval)
-#     return pq
-
-# def execute_test(test_name):
-#     print(f"Executing test: {test_name}")
-#     # Split the test name to get the command and arguments
-#     test_args = test_name.split()
-#     pscheduler_command = ["pscheduler"] + test_args
-    
-#     try:
-#         # Run the pscheduler command and capture the output
-#         result = subprocess.run(pscheduler_command, capture_output=True, text=True)
-#         # print should go to syslog
-#         if result.returncode == 0:
-#             print(f"Test {test_name} succeeded:\n{result.stdout}")
-#             return True
-#         else:
-#             print(f"Test {test_name} failed:\n{result.stderr}")
-#             return False
-#     except Exception as e:
-#         print(f"Error executing test {test_name}: {e}")
-#         return False
-    
 
 def execute_job(job, ssid_profiles):  # execute_batches()
     for ssid in ssid_profiles:
@@ -317,11 +223,6 @@ def execute_job(job, ssid_profiles):  # execute_batches()
 
 def main():
 
-    # function to load jason data
-
-    # JSON data
-    #data = {}
-
     # command line parsing for mode specification    
     parser = argparse.ArgumentParser(
         description='Pssid daemon commanline arguments: debug mode, hostname, and config file.'
@@ -336,16 +237,7 @@ def main():
         help='Specify the path to the config file.'
     )
 
-    args = parser.parse_args()
-
-    # debug
-    # if args.debug:
-    #     print("Debug mode is enabled.")
-    # if args.hostname:
-    #     print("hostname is enabled.")
-    # if args.config:
-    #     print("config is enabled.")
-        
+    args = parser.parse_args()        
     if args.hostname:
         hostname = args.hostname
     else:
@@ -356,27 +248,21 @@ def main():
     else:
         pssid_config_path = "./pssid_config.json"  # replace the default path for pssid config file
 
-    # initialization priority queue and metadata set
-    # pq = SchedulePriorityQueue()
+    # initialization of scheduler and metadata set
     metadata_set = set()
-    # Initialize the scheduler
     s = sched.scheduler(time.time, time.sleep)
 
     stuff = load_json(pssid_config_path)
-    #print(stuff)
 
-
-
- 
-    #_ , metadata_set = process_gui_conf(stuff, pq, metadata_set)
     s , metadata_set = process_gui_conf(stuff, s, metadata_set, hostname)
 
     print_metadat_set(metadata_set)
     print('\n')
-    # print_priority_queue(priority_queue)
+  
 
     # print(s.queue)
     s.run()
+    
     # while True:
     #     if not pq.is_empty():
     #          print(priority_queue.get())
