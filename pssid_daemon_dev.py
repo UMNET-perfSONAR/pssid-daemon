@@ -20,13 +20,13 @@ from croniter import croniter
 #     def __init__(self):
 #         pass
 
-def load_json(filename):
+def load_json(filename):   # try catch, syslog at error level, then die
     with open(filename, 'r', encoding="utf-8") as f:
         return json.load(f)
 
 
 
-# get device information
+# get device information     # if failed, catch and die
 def get_hostname():
     try:
         hostname = socket.gethostname()
@@ -43,14 +43,15 @@ def find_matching_regex(regexes, hostname):
             if re.match(regex, hostname) is not None:
                 return True
         except re.error:
-            print("Regex matching error.")
+            print("what Regex failed, matching error.", re.error)  # syslog at warning level
     return False
 
 
 
 def run_batch(s, batch, data, cron_expression):
     print('\n')
-    print(f"Running batch at {datetime.datetime.now()} of batch {batch['name']} with cron_expression {cron_expression}") 
+    print(f"Running batch at {datetime.datetime.now()} of batch {batch['name']} with cron_expression {cron_expression}")   # syslog at info level
+    # perform test
     schedule_batch(s, batch, data)
     
 
@@ -66,18 +67,17 @@ def schedule_batch(s, batch, data):
                 break
 
         if not cron_expression:
-            print(f"No cron expression found for schedule: {schedule_name}")
+            print(f"No cron expression found for schedule: {schedule_name}")  # syslog at warning level
             continue
         
-        print('cron-expression: ', cron_expression) # for debugging
+        print('cron-expression: ', cron_expression) # for debugging   # comment out 
 
         # cacluate the next run time
         current_time = datetime.datetime.now()
-        #print('current-time--marker-02: ', current_time)
 
         cron = croniter(cron_expression, current_time)
         next_run_time = cron.get_next(datetime.datetime)
-        print("NEXT_run_time:          ", next_run_time) # for debugging
+        print("NEXT_run_time:          ", next_run_time) # for debugging  # comment out 
 
         # determine the earliest next run time for the batch
         if earliest_next_run_time is None or next_run_time < earliest_next_run_time:
@@ -86,9 +86,9 @@ def schedule_batch(s, batch, data):
 
     # add the batch to the priority queue with the earliest next run time
     if earliest_next_run_time is None:
-        print("Warning: no batch is scheduled at this moment")
+        print("Warning: no batch is scheduled at this moment")  # syslog at warning level: cannot schedule a batch, batch does not have schedule
     else:
-        print('earliest_next_run_time: ', earliest_next_run_time)
+        print('earliest_next_run_time: ', earliest_next_run_time)    # syslog at info level: batch / batch name, next run : timestamp : cron_expression
         print('\n') # for debugging
         s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (s, batch, data, earliest_cron_expression))
        
@@ -96,19 +96,11 @@ def schedule_batch(s, batch, data):
     
 # add batches
 def initilize_batches(batch_name_list, data, s):
-
-    if not batch_name_list:
-        # print("batch_name_list is empty.")
-        return
-    
-    
-    #print(batch_name_list)
     for batch_name in batch_name_list:
-    
         # find the batch by name
         batch = next((b for b in data['batches'] if b['name'] == batch_name), None)
         if batch is None:
-            print(f"Batch {batch_name} not found.")
+            print(f"Batch {batch_name} not found.")  #syslog at warning level
             continue
         
         schedule_batch(s, batch, data)
@@ -123,12 +115,13 @@ def add_metadata(metadata_list, metadata_set, origin):
             metadata_set.add((lhs, rhs, origin))
             existing_lhs.add(lhs) # update the lhs
 
-def get_test_interface(metadata_set):  # deleted query as a parameter !
-    target_wireless_interface = None
-    for entry in metadata_set:
-        if entry[0] == 'interface':
-            target_wireless_interface = entry[1]
-    return target_wireless_interface
+
+# def get_test_interface(metadata_set):  # deleted query as a parameter !
+#     target_wireless_interface = None
+#     for entry in metadata_set:
+#         if entry[0] == 'interface':
+#             target_wireless_interface = entry[1]
+#     return target_wireless_interface
 
 
 
@@ -161,51 +154,50 @@ def print_metadat_set(metadata_set):
     print("**************************************")
     print('metadata')
     print("**************************************")
-
     for item in metadata_set:
         print(item)
     print("**************************************")
 
 
 
-def execute_test(test_name):
-    print(f"Executing test: {test_name}")
-    # Split the test name to get the command and arguments
-    test_args = test_name.split()
-    pscheduler_command = ["pscheduler"] + test_args
+# def execute_test(test_name):
+#     print(f"Executing test: {test_name}")
+#     # Split the test name to get the command and arguments
+#     test_args = test_name.split()
+#     pscheduler_command = ["pscheduler"] + test_args
     
-    try:
-        # Run the pscheduler command and capture the output
-        result = subprocess.run(pscheduler_command, capture_output=True, text=True)
-        # print should go to syslog
-        if result.returncode == 0:
-            print(f"Test {test_name} succeeded:\n{result.stdout}")
-            return True
-        else:
-            print(f"Test {test_name} failed:\n{result.stderr}")
-            return False
-    except Exception as e:
-        print(f"Error executing test {test_name}: {e}")
-        return False
+#     try:
+#         # Run the pscheduler command and capture the output
+#         result = subprocess.run(pscheduler_command, capture_output=True, text=True)
+#         # print should go to syslog
+#         if result.returncode == 0:
+#             print(f"Test {test_name} succeeded:\n{result.stdout}")
+#             return True
+#         else:
+#             print(f"Test {test_name} failed:\n{result.stderr}")
+#             return False
+#     except Exception as e:
+#         print(f"Error executing test {test_name}: {e}")
+#         return False
     
 
-def build_netns_and_layers(interface):
-    # create namespace pssid using command line
+def build_netns_and_layers(interface):     # take wpa_supplicant config file 
+    # create namespace pssid 
     create_namespace_command = f"ip netns add pssid"
     subprocess.run(create_namespace_command, shell=True, check=True)
     print('>>>>>>>>>>>> create namespace pssid\n')
 
-    # bond interface with namespace pssid using command line
+    # bond interface with namespace pssid 
     print('>>>>>>>>>>>> bond interface to namespace\n')
     bond_interface_namespace_command = f"iw phy0 set netns name pssid"
     subprocess.run(bond_interface_namespace_command, shell=True, check=True)
 
-    # call layer 2 tool using command line
+    # call layer 2 tool 
     print('>>>>>>>>>>>> build layer 2')
     build_layer2_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_M.conf -i {interface}"
     subprocess.run(build_layer2_tool_command, shell=True, check=True)
     
-    # call layer 3 tool using command line
+    # call layer 3 tool 
     print('\n>>>>>>>>>>>> build layer 3')
     build_layer3_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-dhcp -i wlan0"
     subprocess.run(build_layer3_tool_command, shell=True, check=True)
@@ -271,6 +263,8 @@ def main():
         help='Specify the path to the config file.'
     )
 
+    # add an argument, called validate-config  
+
     # evaluate cli arguments
     args = parser.parse_args()
 
@@ -291,15 +285,16 @@ def main():
     metadata_set = set()
     s = sched.scheduler(time.time, time.sleep)
 
-    stuff = load_json(pssid_config_path)
+    pssid_conf_json = load_json(pssid_config_path)
 
-    s , metadata_set = process_gui_conf(stuff, s, metadata_set, hostname)
+    s, metadata_set = process_gui_conf(pssid_conf_json, s, metadata_set, hostname)
 
     print_metadat_set(metadata_set)
     print('\n')
-  
+    # check if the scheudle is empty, if empty, syslog at error level , program die at this point.
+    # if validate-config, exit with 0
 
-    # print(s.queue)
+    # print(s.queue)   lowest priority. 
     s.run()
 
 if __name__ == "__main__":
