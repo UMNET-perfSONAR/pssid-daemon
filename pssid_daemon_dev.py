@@ -15,11 +15,10 @@ import sched
 import time
 from croniter import croniter
 
-class Daemon:
-    def __init__(self):
-        pass
-
-
+# currently not object oriented
+# class Daemon:
+#     def __init__(self):
+#         pass
 
 def load_json(filename):
     with open(filename, 'r', encoding="utf-8") as f:
@@ -124,6 +123,13 @@ def add_metadata(metadata_list, metadata_set, origin):
             metadata_set.add((lhs, rhs, origin))
             existing_lhs.add(lhs) # update the lhs
 
+def get_test_interface(metadata_set):  # deleted query as a parameter !
+    target_wireless_interface = None
+    for entry in metadata_set:
+        if entry[0] == 'interface':
+            target_wireless_interface = entry[1]
+    return target_wireless_interface
+
 
 
 def process_gui_conf(data, s, metadata_set, hostname):
@@ -183,47 +189,75 @@ def execute_test(test_name):
         return False
     
 
+def build_netns_and_layers(interface):
+    # create namespace pssid using command line
+    create_namespace_command = f"ip netns add pssid"
+    subprocess.run(create_namespace_command, shell=True, check=True)
+    print('>>>>>>>>>>>> create namespace pssid\n')
 
-def execute_job(job, ssid_profiles):  # execute_batches()
-    for ssid in ssid_profiles:
-        try:
-            # create namespace pssid using command line
-            create_namespace_command = f"sudo ip netns add pssid"
-            subprocess.run(create_namespace_command, shell=True, check=True)
+    # bond interface with namespace pssid using command line
+    print('>>>>>>>>>>>> bond interface to namespace\n')
+    bond_interface_namespace_command = f"iw phy0 set netns name pssid"
+    subprocess.run(bond_interface_namespace_command, shell=True, check=True)
 
-            
-            # bond interface with namespace pssid using command line
-            bond_interface_namespace_command = f"sudo iw phy0 set netns name pssid"
-            subprocess.run(bond_interface_namespace_command, shell=True, check=True)
+    # call layer 2 tool using command line
+    print('>>>>>>>>>>>> build layer 2')
+    build_layer2_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_M.conf -i {interface}"
+    subprocess.run(build_layer2_tool_command, shell=True, check=True)
+    
+    # call layer 3 tool using command line
+    print('\n>>>>>>>>>>>> build layer 3')
+    build_layer3_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-dhcp -i wlan0"
+    subprocess.run(build_layer3_tool_command, shell=True, check=True)
 
-            # call layer 2 tool using command line
-            layer2_tool_command = f"sudo ip netns exec pssid /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/{ssid}.conf -i wlan0"
-            subprocess.run(layer2_tool_command, shell=True, check=True)
 
-            # call layer 3 tool using command line
-            layer3_tool_command = f"sudo ip netns exec pssid /usr/lib/exec/pssid/pssid-dhcp -i wlan0"
-            subprocess.run(layer3_tool_command, shell=True, check=True)
+def teardown_netns_and_layers(interface):
+    # teardown l3
+    print('\n>>>>>>>>>>>> teardown layer 3')
+    teardown_layer3_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-dhcp -i wlan0 -d"
+    subprocess.run(teardown_layer3_tool_command, shell=True, check=True)
+    
+    # teardown l2
+    print('\n>>>>>>>>>>>> teardown layer 2')
+    teardown_layer2_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_M.conf -i {interface} -d"
+    subprocess.run(teardown_layer2_tool_command, shell=True, check=True)
+    
+    # delete namespace pssid using command line
+    create_namespace_command = f"ip netns delete pssid"
+    subprocess.run(create_namespace_command, shell=True, check=True)
+    print('\n>>>>>>>>>>>> delete namespace pssid\n')
+    
 
-            # simulation a test
-            test_simulation_command = f"wget www.goog.com"
-            subprocess.run(test_simulation_command, shell=True, check=True)
 
-            # for test in job['tests']:
-            #     if not execute_test(test):
-            #         if not job.get('continue-if', True):
-            #             print("Job stopped due to test failure.")
-            #             # to syslog
-            #             break
-            #     # delay between tests, or return code is true, then start next test
+def execute_batches(batch, metadata_set, data):  # previously called def execute_job(job, ssid_profiles)
+    target_wireless_interface = get_test_interface(metadata_set)
+    for ssid in batch["ssid_profiles"]:
+        for job in batch["jobs"]:
+            try:
+                build_netns_and_layers(target_wireless_interface)
+                
+                # simulation a test
+                print('\n>>>>>>>>>>>> run wget test')
+                test_simulation_command = f"wget -P /home/dianluhe www.google.com"
+                subprocess.run(test_simulation_command, shell=True, check=True)
 
-        except subprocess.CalledProcessError as e:
-            print(f"Error executing command for SSID '{ssid}': {e}")
-            # log error to syslog or handle as needed
+                # for job in data["jobs"]:
+                #     for test in job["tests"]:
+                #         if not execute_test(test):
+                #             if not job.get('continue-if', True):
+                #                 print("Job stopped due to test failure.")
+                #                 # to syslog
+                #                 break
+
+                teardown_netns_and_layers(target_wireless_interface)
+
+            except subprocess.CalledProcessError as e:
+                print(f"Error executing command for SSID Mwireless: {e}")
+                # log error to syslog or handle as needed
 
 
 def main():
-
-    # command line parsing for mode specification    
+    # command line parsing for specifications   
     parser = argparse.ArgumentParser(
         description='Pssid daemon commanline arguments: debug mode, hostname, and config file.'
     )
@@ -237,7 +271,12 @@ def main():
         help='Specify the path to the config file.'
     )
 
-    args = parser.parse_args()        
+    # evaluate cli arguments
+    args = parser.parse_args()
+
+    # if args.debug
+    # either implement here, or put the in the class Daemon's constructor  
+         
     if args.hostname:
         hostname = args.hostname
     else:
@@ -246,7 +285,7 @@ def main():
     if args.config:
         pssid_config_path = args.config
     else:
-        pssid_config_path = "./pssid_config.json"  # replace the default path for pssid config file
+        pssid_config_path = "./pssid_config.json"  # replace the default path for pssid config file  --> /var/lib/pssid/pssid_config.json
 
     # initialization of scheduler and metadata set
     metadata_set = set()
@@ -262,54 +301,6 @@ def main():
 
     # print(s.queue)
     s.run()
-    
-    # while True:
-    #     if not pq.is_empty():
-    #          print(priority_queue.get())
-
-
-    #device_info = get_device_info()
-   
-
-    # extract batches and process schedules
- 
-   # batches =  add_batches_and_metadata(device_info, data)
-    #pq = process_batches(batches)
-
-    # continuously process the schedules
-    # while True:
-    #     if not pq.is_empty():
-    #         priority, next_run_time, job_info, interval = pq.get()
-    #         job, ssid_profiles, batch_name = job_info
-    #         current_time = time.time()
-    #         if current_time >= next_run_time:
-    #             # run the job 
-    #             print(f"Running job: {job['name']} from batch: {batch_name} with priority {priority}")
-                
-
-    #             execute_job(job, ssid_profiles)
-
-    #             # for test in job['tests']:
-    #             #     success = execute_test(test)
-    #             #     if not success and not job['continue-if']:
-    #             #         print(f"Stopping further tests for job: {job['name']} due to test failure and 'continue-if' set to False.")
-    #             #         break
-                
-    #             # calculate the new current time after job execution
-    #             current_time = time.time()
-                
-    #             # calculate the next run time based on the original schedule interval
-    #             next_run_time += interval * ((current_time - next_run_time) // interval + 1)
-    #             pq.put((job, batch_name), next_run_time, priority, interval)
-    #         else:
-    #             # if it's not time to run yet, put it back into the queue
-    #             pq.put((job, batch_name), next_run_time, priority, interval)
-
-    #             # sleep until it's time to run the next schedule
-    #             time.sleep(next_run_time - current_time)
-    #     else:
-    #         # if the queue is empty, wait for a bit before checking again
-    #         time.sleep(1)
 
 if __name__ == "__main__":
     main()
