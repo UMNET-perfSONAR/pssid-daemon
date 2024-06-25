@@ -1,6 +1,11 @@
 # first activate the virtual environment
 # python3 pssid_daemon_dev.py --hostname "198.111.226.184"
 
+# in the target node
+# -- apt install pip3
+# -- pip install croniter 
+
+
 import json
 import socket
 import re
@@ -20,32 +25,26 @@ from croniter import croniter
 #     def __init__(self):
 #         pass
 
-# load the 
-def load_json(filename):   # try catch, syslog at error level, then die [done/uncheck]
+# load the json file
+def load_json(filename):
     try:
         with open(filename, 'r', encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError as e:
-        # log error at error level
-        syslog.openlog(ident='load_json', facility=syslog.LOG_LOCAL0)
         syslog.syslog(syslog.LOG_ERR, f"Error loading JSON from {filename}: {e}")
-        syslog.closelog()
-        sys.exit(1)       #raise e  # to terminate the program
+        sys.exit(1)      
 
 
 
-# get device information     # if failed, catch and die [done/uncheck]
+# get device information 
 def get_hostname():
     print("get hostname func called")
     try:
         hostname = socket.gethostname()
         return hostname
     except socket.error as e:
-        # log error at warning level
-        syslog.openlog(ident='get_hostname', facility=syslog.LOG_LOCAL0)
         syslog.syslog(syslog.LOG_ERR, f"Failed to obtain hostname: {e}")
-        syslog.closelog()
-        # terminate the program
+        # terminate if log-err
         sys.exit(1)
 
 
@@ -57,17 +56,16 @@ def find_matching_regex(regexes, hostname):
             if re.match(regex, hostname) is not None:
                 return True
         except re.error as e:
-            # log error at warning level
-            syslog.openlog(ident='find_matching_regex', facility=syslog.LOG_LOCAL0)
             syslog.syslog(syslog.LOG_WARNING, f"Regex '{regex}' matching error: {e}")
-            syslog.closelog()
     return False
 
 
 
 def run_batch(s, batch, data, cron_expression):
     print('\n')
+    batch_name = batch["name"]
     print(f"Running batch at {datetime.datetime.now()} of batch {batch['name']} with cron_expression {cron_expression}")   # syslog at info level
+    syslog.syslog(syslog.LOG_INFO, f"Running batch at {datetime.datetime.now()} of name of {batch_name} with cron_expression {cron_expression}")
     # perform test
     execute_batch(batch)
     schedule_batch(s, batch, data)
@@ -86,10 +84,7 @@ def schedule_batch(s, batch, data):
                 break
 
         if not cron_expression:
-            # log error at warning level
-            syslog.openlog(ident='schedule_batch', facility=syslog.LOG_LOCAL0)
             syslog.syslog(syslog.LOG_WARNING, f"No cron expression found for schedule: {schedule_name}")
-            syslog.closelog()
             continue
         
         # print('cron-expression: ', cron_expression) # for debugging   # comment out 
@@ -108,16 +103,10 @@ def schedule_batch(s, batch, data):
 
     # add the batch to the priority queue with the earliest next run time
     if earliest_next_run_time is None:
-        # log error at warning level
-        syslog.openlog(ident='schedule_batch', facility=syslog.LOG_LOCAL0)
         syslog.syslog(syslog.LOG_WARNING, f"Cannot schedule a batch, batch does not have a schedule.")
-        syslog.closelog()
     else:
-        #print('earliest_next_run_time: ', earliest_next_run_time)    # syslog at info level: batch / batch name, next run : timestamp : cron_expression
-        syslog.openlog(ident='schedule_batch', facility=syslog.LOG_LOCAL0)
-        syslog.syslog(syslog.LOG_INFO, f"Batch '{batch_name}', earlist next run time: {earliest_next_run_time}, cron expression: {cron_expression}")
-        syslog.closelog()
-
+        #print('earliest_next_run_time: ', earliest_next_run_time) 
+        syslog.syslog(syslog.LOG_INFO, f"Schedule batch '{batch_name}', earlist next run time: {earliest_next_run_time}, cron expression: {earliest_cron_expression}")
         # print('\n') # for debugging
         s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (s, batch, data, earliest_cron_expression))
        
@@ -129,10 +118,7 @@ def initilize_batches(batch_name_list, data, s):
         # find the batch by name
         batch = next((b for b in data['batches'] if b['name'] == batch_name), None)
         if batch is None:
-            # Log warning using syslog
-            syslog.openlog(ident='initialize_batches', facility=syslog.LOG_LOCAL0)
             syslog.syslog(syslog.LOG_WARNING, f"Batch '{batch_name}' not found.")
-            syslog.closelog()
             continue
         
         schedule_batch(s, batch, data)
@@ -164,24 +150,23 @@ def process_gui_conf(data, s, metadata_set, hostname):
             host_match = host["name"]
             initilize_batches(host["batches"], data, s)
             add_metadata(host["data"].items(), metadata_set, host["name"])
-            
+
+            syslog.syslog(syslog.LOG_INFO, f"Host {hostname} identified in hosts")
+
+
     # syslog warning if no match
     if host_match == None: 
-        syslog.openlog(ident='process_gui_conf', facility=syslog.LOG_LOCAL0)
         syslog.syslog(syslog.LOG_ERR, f"No host with name '{hostname}' found.")
-        syslog.closelog()
         sys.exit(1)       
-
+    
     # check host groups for further matches
     for group in data["host_groups"]:
         group_name = group["name"]
         if host in group["hosts"] or find_matching_regex(group["hosts_regex"], host_match):
             initilize_batches(group["batches"], data, s)
             add_metadata(group["data"].items(), metadata_set, group["name"])
-            # syslog group name
-            syslog.openlog(ident='process_gui_conf', facility=syslog.LOG_LOCAL0)
-            syslog.syslog(syslog.LOG_INFO, f"Host identified in {group_name} group")
-            syslog.closelog()
+
+            syslog.syslog(syslog.LOG_INFO, f"Host {hostname} identified in {group_name} group")
 
     return s, metadata_set
 
@@ -228,28 +213,34 @@ def build_netns_and_layers(interface='wlan0', wpa_file='/etc/wpa_supplicant/wpa_
     print('>>>>>>>>>>>> bond interface to namespace\n')
     bond_interface_namespace_command = f"iw phy0 set netns name pssid"
     subprocess.run(bond_interface_namespace_command, shell=True, check=True)
+    syslog.syslog(syslog.LOG_INFO, f"created namespace pssid and bond with interface {interface}")
 
     # call layer 2 tool 
     print('>>>>>>>>>>>> build layer 2')
     build_layer2_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-80211 -c {wpa_file} -i {interface}"
-    subprocess.run(build_layer2_tool_command, shell=True, check=True)
-    
+    layer2_process = subprocess.run(build_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
+    syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
+
     # call layer 3 tool 
     print('\n>>>>>>>>>>>> build layer 3')
     build_layer3_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-dhcp -i {interface}"
-    subprocess.run(build_layer3_tool_command, shell=True, check=True)
+    layer3_process = subprocess.run(build_layer3_tool_command, shell=True, check=True, capture_output=True, text=True)
+    syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp: {layer3_process.stdout.strip()}")
+
 
 
 def teardown_netns_and_layers(interface='wlan0', wpa_file='/etc/wpa_supplicant/wpa_M.conf'):
     # teardown l3
     print('\n>>>>>>>>>>>> teardown layer 3')
     teardown_layer3_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-dhcp -i {interface} -d"
-    subprocess.run(teardown_layer3_tool_command, shell=True, check=True)
+    layer3_process = subprocess.run(teardown_layer3_tool_command, shell=True, check=True, capture_output=True, text=True)
+    syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp: {layer3_process.stdout.strip()}")
     
     # teardown l2
     print('\n>>>>>>>>>>>> teardown layer 2')
     teardown_layer2_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-80211 -c {wpa_file} -i {interface} -d"
-    subprocess.run(teardown_layer2_tool_command, shell=True, check=True)
+    layer2_process = subprocess.run(teardown_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
+    syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
     
     # delete namespace pssid using command line
     create_namespace_command = f"ip netns delete pssid"
@@ -261,12 +252,16 @@ def teardown_netns_and_layers(interface='wlan0', wpa_file='/etc/wpa_supplicant/w
 def execute_batch(batch):  # previously called def execute_job(job, ssid_profiles)
     
     for ssid in batch["ssid_profiles"]:
+        # build process
         build_netns_and_layers()
 
         print('\n>>>>>>>>>>>> run wget test')   # syslog at info level
         test_simulation_command = f"wget -P /home/dianluhe www.google.com"
-        subprocess.run(test_simulation_command, shell=True, check=True)      # capture the output --> capture_output=True and syslog it , how??
+        # subprocess.run(test_simulation_command, shell=True, check=True)      # capture the output --> capture_output=True and syslog it , how??
+        wget_process = subprocess.run(test_simulation_command, shell=True, check=True, capture_output=True, text=True)      # capture the output --> capture_output=True and syslog it , how??
+        syslog.syslog(syslog.LOG_INFO, f"wget output: {wget_process.stdout.strip()}")
 
+        # teardown process
         teardown_netns_and_layers()
 
         
@@ -300,6 +295,9 @@ def execute_batch(batch):  # previously called def execute_job(job, ssid_profile
 
 
 def main():
+
+    
+
     # command line parsing for specifications   
     parser = argparse.ArgumentParser(
         description='Pssid daemon commanline arguments: debug mode, hostname, and config file.'
@@ -337,6 +335,8 @@ def main():
     # initialization of scheduler and metadata set
     metadata_set = set()
     s = sched.scheduler(time.time, time.sleep)
+    # open syslog
+    syslog.openlog(ident='pssid', facility=syslog.LOG_LOCAL0)
 
     pssid_conf_json = load_json(pssid_config_path)
 
