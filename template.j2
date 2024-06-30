@@ -1,0 +1,44 @@
+{
+    "label": "{{ job_label }}",
+    "iterations": 1,
+    "parallel": true,
+    "backoff": "PT1M",
+    "task": {
+        "reference": {
+            "contexts": {
+                "contexts": [
+                    [
+                        {
+                            "context": "linuxnns",
+                            "data": {
+                                "namespace": "pssid"
+                            }
+                        }
+                    ]
+                ],
+                "schema": 1
+            },
+            "tests": [
+                {% for test in tests %}
+                {
+                    "type": "{{ test.type }}",
+                    "spec": {
+                        {% for key, value in test.spec.items() %}
+                        "{{ key }}": "{{ value }}"{% if not loop.last %},{% endif %}
+                        {% endfor %}
+                    }
+                }{% if not loop.last %},{% endif %}
+                {% endfor %}
+            ]
+        },
+        "#": "This is intentionally empty:",
+        "test": {}
+    },
+    "task-transform": {
+        "script": [
+            "# Replace the test section of the task with one of the",
+            "# tests in the reference block based on the iteration.",
+            ".test = .reference.tests[$iteration]"
+        ]
+    }
+}
