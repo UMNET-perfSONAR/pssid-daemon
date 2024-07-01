@@ -170,6 +170,17 @@ def print_metadat_set(metadata_set):
 
 #/etc/wpa_supplicant/wpa_M.conf
 def build_netns_and_layers(interface='wlan0', wpa_file='/etc/wpa_supplicant/wpa_M.conf'):  
+
+    # check if namespace 'pssid' exists
+    check_namespace_command = "ip netns list | grep -q pssid"
+    namespace_exists = subprocess.run(check_namespace_command, shell=True, capture_output=True).returncode == 0
+
+    if namespace_exists:
+        # if namespace exists, delete it first
+        delete_namespace_command = "ip netns delete pssid"
+        subprocess.run(delete_namespace_command, shell=True, check=True)
+        print('>>>>>>>>>>>> Deleted existing namespace pssid\n')
+
     # create namespace pssid
     create_namespace_command = f"ip netns add pssid"
     subprocess.run(create_namespace_command, shell=True, check=True)

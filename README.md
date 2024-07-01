@@ -14,6 +14,10 @@ After configuration, pssid-daemon.py will syslog to pssid.log.
 ```bash
 local0.*    /var/log/pssid.log
 ```
+3. Restart syslog service
+```bash
+systemctl restart rsyslog
+```
 
 
 # Setup Layer 2 & Layer 3 tools
@@ -27,13 +31,15 @@ teardown_netns_and_layers(interface='wlan0', wpa_file='/etc/wpa_supplicant/wpa_M
 ```bash
 git clone https://github.com/UMNET-perfSONAR/VT-collab.git
 ```
+2. Follow VT-collab repo's setup procedure
 
 2. Setup the wpa_supplicant config file to this path: /etc/wpa_supplicant/
 
 
 # Install dependencies
 ```bash
-  apt install pip3
+  apt install python3-pip
+  apt install iw
   pip install croniter
 ```
 
