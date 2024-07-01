@@ -233,7 +233,7 @@ def execute_batch(batch):
         build_netns_and_layers()
 
         print('\n>>>>>>>>>>>> run wget test')   # syslog at info level
-        test_simulation_command = f"wget -P /home/dianluhe www.google.com"
+        test_simulation_command = f"ip netns exec pssid wget -P /home/dianluhe www.google.com"
         wget_process = subprocess.run(test_simulation_command, shell=True, check=True, capture_output=True, text=True)    
         syslog.syslog(syslog.LOG_INFO, f"Run wget, return code: {wget_process.returncode}")
 

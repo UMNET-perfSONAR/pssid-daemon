@@ -8,7 +8,7 @@ pSSID scheduler/test daemon
 After configuration, pssid-daemon.py will syslog to pssid.log.
 1. Open the rsyslog.conf file.
 ```bash
-  vi /etc/rsyslog.conf
+vi /etc/rsyslog.conf
 ```
 2. Add the following line at the end:
 ```bash
@@ -38,14 +38,21 @@ git clone https://github.com/UMNET-perfSONAR/VT-collab.git
 
 # Install dependencies
 ```bash
-  apt install python3-pip
-  apt install iw
-  pip install croniter
+apt install python3-pip
+apt install iw
+pip install croniter
 ```
 
 
 # Usage/Examples
+clone this branch
+```bash
+git clone --branch pssid-daemon-JL-test https://github.com/UMNET-perfSONAR/pssid-daemon.git
+```
+
+
 By default, pssid-daemon.py and pssid_config.json are in the same folder.
+Run this program in root.
 ```javascript
 python3 pssid-daemon.py --hostname "198.111.226.184"
 ```
@@ -54,3 +61,6 @@ python3 pssid-daemon.py --hostname "198.111.226.184"
 ```javascript
 python3 pssid-daemon.py --config "./pssid_config.json" --hostname "198.111.226.184"
 ```
+
+# Debug
+If namespace pssid was created previously, remember to delete the namespace and reboot to resolve related errors.
