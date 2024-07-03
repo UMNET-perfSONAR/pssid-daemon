@@ -56,6 +56,8 @@ Run this program in root.
 
 "198.111.226.184" is the only host defined in the pssid_config.json, run specifically with the hsot name.
 
+Modify pssid_config.json, update "ssid_profiles" according to your test environment.
+
 ```javascript
 python3 pssid-daemon.py --hostname "198.111.226.184"
 ```
