@@ -8,6 +8,12 @@
 # ip netns exec pssid_wlan0 /usr/lib/exec/pssid/pssid-80211 -c '/etc/wpa_supplicant/wpa_supplicant_Mwireless.conf' -i wlan0 -d
 # ip netns exec pssid_wlan0 /usr/lib/exec/pssid/pssid-dhcp -i wlan0 -d
 
+# ip netns pids pssid_wlan0 | xargs kill
+# cat /etc/netns/pssid_wlan0/resolv.conf
+# tail -f /var/log/pssid.log
+
+# cat /etc/resolv.conf
+
 import json
 import socket
 import re
@@ -20,6 +26,7 @@ import argparse
 import datetime
 import sched
 import time
+import os
 from croniter import croniter
 
 # currently not object oriented
@@ -359,6 +366,7 @@ def netns_delete():
         print('>>>>>>>>>>>> Deleted existing namespace pssid\n')
 
 
+
 def interface_in_namespace(interface):
     try:
         # check if interface is in namespace
@@ -373,6 +381,36 @@ def interface_in_namespace(interface):
         print(f"Error checking interface in namespace: {e}")
         syslog.syslog(syslog.LOG_ERR, f"Error checking {interface} in namespace: {e}")
         return False
+
+
+
+def fetch_interfaces():
+    # Initialize lookup table
+    interface_phy_mapping = {}
+
+    print('>> run iw dev')
+    iw_dev_command = f"iw dev"
+    get_interface_info = subprocess.run(iw_dev_command, shell=True, check=True, capture_output=True, text=True)
+    # print({get_interface_info.stdout.strip()})
+    output = get_interface_info.stdout.strip()
+
+    # Regular expression pattern to match each phy# and its associated interface
+    pattern = r'^phy#(\d+)\n\s+Interface (\S+)'
+
+    # Find all matches in the output
+    matches = re.finditer(pattern, output, re.MULTILINE)
+
+    for match in matches:
+        phy_number = match.group(1)
+        interface_name = match.group(2)
+        interface_phy_mapping[interface_name] = f"phy{phy_number}"
+    
+    return interface_phy_mapping
+
+def get_default_phy(interface_name, interface_phy_mapping):
+    # Assuming interface_phy_mapping is a dictionary mapping interface names to phy identifiers
+    return interface_phy_mapping.get(interface_name)
+
 
 
 def setup_netns(batch):
@@ -398,17 +436,75 @@ def setup_netns(batch):
     
     # check if interface is in namespace
     if not interface_in_namespace(interface):
+        interface_phy_mapping = fetch_interfaces()
+        phy_name = get_default_phy(interface, interface_phy_mapping)
+
         try:
             # bond interface with namespace pssid 
-            bond_interface_namespace_command = f"iw phy0 set netns name {namespace}"
+            bond_interface_namespace_command = f"iw {phy_name} set netns name {namespace}"
             subprocess.run(bond_interface_namespace_command, shell=True, check=True)
             print(f'>>>>>>>>>>>> bond {interface} to {namespace}\n')
             syslog.syslog(syslog.LOG_INFO, f"Add interface {interface} to namespace {namespace}")
+            
         except subprocess.CalledProcessError as e:
             print(f"Error bonding interface {interface} with namespace {namespace}")
             syslog.syslog(syslog.LOG_ERR, f"Error bonding interface {interface} with namespace {namespace}")
             return
+        
+    # clean the namespace
+    # check if there are processes in namespace
+    netns_process_exists_command = f"ip netns pids {namespace}"
+    netns_process_exists = subprocess.run(netns_process_exists_command, shell=True, capture_output=True, text=True)
+    print("netns_process_exists: ", netns_process_exists)
+    print('***                     *****                ****')
+    # kill all processes in namespace
+    if netns_process_exists.stdout.strip():
+        # try:
+        #     kill_netns_processes_command = f"ip netns pids {namespace} | xargs kill"
+        #     subprocess.run(kill_netns_processes_command, shell=True, check=True)
+        #     syslog.syslog(syslog.LOG_INFO, f"Killed processes in namespace {namespace} for initialization")
+        #     print(f'>>>>>>>>>>>> Killed processes in namespace {namespace} for reinitialization\n')
+        # except subprocess.CalledProcessError as e:
+        #     print(f"Error killing processes in namespace {namespace}")
+        #     syslog.syslog(syslog.LOG_ERR, f"Error killing processes in namespace {namespace} : {e}")
+        
+        # make sure layer 2 and layer 3 tools are not running
+        # teardown l3
+        print('                         <<-----------------------------')
+        try:
+            teardown_layer3_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-dhcp -i {interface} -d"
+            layer3_process = subprocess.run(teardown_layer3_tool_command, shell=True, check=False, capture_output=True, text=True)
+            syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp: {layer3_process.stdout.strip()}")
+            print('\n>>>>>>>>>>>> teardown layer 3')
+        except subprocess.CalledProcessError as e:
+            print(f"Error tearing down layer 3")
+            syslog.syslog(syslog.LOG_ERR, f"Error tearing down layer 3")
+            
+        
+        # teardown l2
+        try:
+            teardown_layer2_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_supplicant_Mwireless.conf -i {interface} -d"
+            layer2_process = subprocess.run(teardown_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
+            syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
+            print('\n>>>>>>>>>>>> teardown layer 2')
+        except subprocess.CalledProcessError as e:
+            print(f"Error tearing down layer 2")
+            syslog.syslog(syslog.LOG_ERR, f"Error tearing down layer 2")
+            return
+        
+        print('                         ----------------------------->>')
 
+    
+    # remove existing resolv.conf in namespace
+    if os.path.exists(f"/etc/netns/{namespace}/resolv.conf"):
+        try:
+            rm_existing_resolv_conf_command = f"rm /etc/netns/{namespace}/resolv.conf" # possible remaining resolv.conf after interupted pssid-daemon, the file might be the one copied from /tmp/resolv.conf to /etc/resolv.conf in previous run 
+            subprocess.run(rm_existing_resolv_conf_command, shell=True, check=False) # ignore error if file not found
+            syslog.syslog(syslog.LOG_INFO, f"Remove existing resolv.conf in namespace {namespace}")
+            print(f'>>>>>>>>>>>> Remove existing resolv.conf in namespace {namespace}\n')
+        except subprocess.CalledProcessError as e:
+            print(f"Error removing existing resolv.conf in namespace {namespace}")
+            syslog.syslog(syslog.LOG_ERR, f"Error removing existing resolv.conf in namespace {namespace} : {e}")
 
 
 
@@ -425,7 +521,7 @@ def process_on_layer_2(batch, ssid_profile):
 
     except subprocess.CalledProcessError as e:
         print(f"Error building layer 2")
-        syslog.syslog(syslog.LOG_ERR, f"Error building layer 2")
+        syslog.syslog(syslog.LOG_ERR, f"Error building layer 2-------------")
         return
     
     process_on_layer_3(batch)
@@ -489,8 +585,8 @@ def process_on_layer_3(batch):
         syslog.syslog(syslog.LOG_INFO, f"Failed to copy default namespace's /etc/resolv.conf to /tmp/resolv.conf")
         return
     
-    print("debug function called before calling layer 3 tool") 
-    debug_resolv_conf()
+    # print("debug function called before calling layer 3 tool") 
+    # debug_resolv_conf()
     
 
     try:
@@ -508,8 +604,8 @@ def process_on_layer_3(batch):
         syslog.syslog(syslog.LOG_ERR, f"Error building layer 3")
         return
     
-    print("debug function called AFTER calling layer 3 tool") 
-    debug_resolv_conf()
+    # print("debug function called AFTER calling layer 3 tool") 
+    # debug_resolv_conf()
 
     try:
         print("marker------------A")
