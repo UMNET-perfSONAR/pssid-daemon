@@ -45,7 +45,7 @@ pip install croniter
 
 
 # Usage/Examples
-clone this branch
+Clone this branch
 ```bash
 git clone --branch pssid-daemon-JL-test https://github.com/UMNET-perfSONAR/pssid-daemon.git
 ```
@@ -53,6 +53,9 @@ git clone --branch pssid-daemon-JL-test https://github.com/UMNET-perfSONAR/pssid
 
 By default, pssid-daemon.py and pssid_config.json are in the same folder.
 Run this program in root.
+
+"198.111.226.184" is the only host defined in the pssid_config.json, run specifically with the hsot name.
+
 ```javascript
 python3 pssid-daemon.py --hostname "198.111.226.184"
 ```
