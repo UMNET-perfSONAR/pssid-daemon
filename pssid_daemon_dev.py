@@ -540,7 +540,7 @@ def process_on_layer_3(batch):
         # copy layer3 generated /etc/resolv.conf to /etc/netns/{namespace}/resolv.conf
         copy_resolv_conf_command = f"cp /etc/resolv.conf /etc/netns/{namespace}/"
         subprocess.run(copy_resolv_conf_command, shell=True, check=True)
-        print(f"\n>> copied /etc/resolv.conf to /etc/netns/{namespace}/resolv.conf ")
+        print(f"\n>> copied /etc/resolv.conf to /etc/netns/{namespace}/resolv.conf")
     
     except subprocess.CalledProcessError as e:
         print(f"failed to copy /etc/resolv.conf to /etc/netns/{namespace}/resolv.conf")
@@ -553,6 +553,7 @@ def process_on_layer_3(batch):
         # copy original /tmp/resolv.conf to /etc/resolv.conf to solve DNS issue
         copy_resolv_conf_command = f"cp /tmp/resolv.conf /etc/"
         subprocess.run(copy_resolv_conf_command, shell=True, check=True)
+        print(f"\n>> copied /tmp/resolv.conf to /etc/resolv.conf")
 
     except subprocess.CalledProcessError as e:
         syslog.syslog(syslog.LOG_ERR, f"Failed to copy /tmp/resolv.conf to /etc/resolv.conf")
