@@ -318,33 +318,13 @@ def process_gui_conf(data, s, metadata_set, hostname, scheduled_batches):
 
 def print_metadat_set(metadata_set):
     print("**************************************")
-    print('metadata')
+    print('Metadata')
     print("**************************************")
     for item in metadata_set:
         print(item)
     print("**************************************")
 
 
-
-# def execute_test(test_name):
-#     print(f"Executing test: {test_name}")
-#     # Split the test name to get the command and arguments
-#     test_args = test_name.split()
-#     pscheduler_command = ["pscheduler"] + test_args
-    
-#     try:
-#         # Run the pscheduler command and capture the output
-#         result = subprocess.run(pscheduler_command, capture_output=True, text=True)
-#         # print should go to syslog
-#         if result.returncode == 0:
-#             print(f"Test {test_name} succeeded:\n{result.stdout}")
-#             return True
-#         else:
-#             print(f"Test {test_name} failed:\n{result.stderr}")
-#             return False
-#     except Exception as e:
-#         print(f"Error executing test {test_name}: {e}")
-#         return False
 
 # obsolete
 def netns_delete():
@@ -568,8 +548,6 @@ def debug_resolv_conf():
 
     
     
-    
-
 def process_on_layer_3(batch):
     
     interface = batch["test_interface"]
@@ -585,12 +563,10 @@ def process_on_layer_3(batch):
         syslog.syslog(syslog.LOG_INFO, f"Failed to copy default namespace's /etc/resolv.conf to /tmp/resolv.conf")
         return
     
-    # print("debug function called before calling layer 3 tool") 
-    # debug_resolv_conf()
+    # debug_resolv_conf() # for debugging
     
-
     try:
-        # call layer 3 tool ###########################
+        # call layer 3 tool
         
         build_layer3_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-dhcp -i {interface}"
         layer3_process = subprocess.run(build_layer3_tool_command, shell=True, check=True, capture_output=True, text=True)
@@ -604,8 +580,8 @@ def process_on_layer_3(batch):
         syslog.syslog(syslog.LOG_ERR, f"Error building layer 3")
         return
     
-    # print("debug function called AFTER calling layer 3 tool") 
-    # debug_resolv_conf()
+   
+    # debug_resolv_conf() # for debugging
 
     try:
         print("marker------------A")
@@ -625,7 +601,7 @@ def process_on_layer_3(batch):
     
     print(f"debug function called after copy resolv.conf to /etc/netns/{namespace}/resolv.conf") 
 
-    debug_resolv_conf()
+    # debug_resolv_conf() # for debugging
 
     try:
         # copy original /tmp/resolv.conf to /etc/resolv.conf to solve DNS issue
@@ -641,10 +617,8 @@ def process_on_layer_3(batch):
     wget_process = subprocess.run(test_simulation_command, shell=True, check=True, capture_output=True, text=True)    
     syslog.syslog(syslog.LOG_INFO, f"Run wget, return code: {wget_process.returncode}")
 
-
     try:
         # teardown l3
-       
         teardown_layer3_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-dhcp -i {interface} -d"
         layer3_process = subprocess.run(teardown_layer3_tool_command, shell=True, check=True, capture_output=True, text=True)
         print('\n>>>>>>>>>>>> teardown layer 3')
@@ -663,73 +637,7 @@ def process_on_layer_3(batch):
         syslog.syslog(syslog.LOG_ERR, f"Failed to delete /etc/netns/{namespace}/resolv.conf")
         return
 
-
-
-
-#/etc/wpa_supplicant/wpa_M.conf
-# pyh0 is hard coded now, need change. a lookup table is needed. 
-# local
-def build_netns_and_layers(interface='wlan0', wpa_file='/etc/wpa_supplicant/wpa_M.conf'):     # take wpa_supplicant config file       interface default value :  wlan0, 
-    # create namespace pssid 
-    create_namespace_command = f"ip netns add pssid"
-    subprocess.run(create_namespace_command, shell=True, check=True)
-    print('>>>>>>>>>>>> create namespace pssid\n')
-
-    # bond interface with namespace pssid 
-    print('>>>>>>>>>>>> bond interface to namespace\n')
-    bond_interface_namespace_command = f"iw phy0 set netns name pssid"
-    subprocess.run(bond_interface_namespace_command, shell=True, check=True)
-    syslog.syslog(syslog.LOG_INFO, f"Create namespace pssid and bond with interface {interface}")
-
-    # call layer 2 tool 
-    print('>>>>>>>>>>>> build layer 2')
-    build_layer2_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-80211 -c {wpa_file} -i {interface}"
-    layer2_process = subprocess.run(build_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
-    syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
-
-    # call layer 3 tool 
-    print('\n>>>>>>>>>>>> build layer 3')
-    build_layer3_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-dhcp -i {interface}"
-    layer3_process = subprocess.run(build_layer3_tool_command, shell=True, check=True, capture_output=True, text=True)
-    syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp: {layer3_process.stdout.strip()}")
-
-
-
-def teardown_netns_and_layers(interface='wlan0', wpa_file='/etc/wpa_supplicant/wpa_M.conf'):
-    # teardown l3
-    print('\n>>>>>>>>>>>> teardown layer 3')
-    teardown_layer3_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-dhcp -i {interface} -d"
-    layer3_process = subprocess.run(teardown_layer3_tool_command, shell=True, check=True, capture_output=True, text=True)
-    syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp: {layer3_process.stdout.strip()}")
-    
-    # teardown l2
-    print('\n>>>>>>>>>>>> teardown layer 2')
-    teardown_layer2_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-80211 -c {wpa_file} -i {interface} -d"
-    layer2_process = subprocess.run(teardown_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
-    syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
-    
-    # delete namespace pssid using command line
-    create_namespace_command = f"ip netns delete pssid"
-    subprocess.run(create_namespace_command, shell=True, check=True)
-    print('\n>>>>>>>>>>>> delete namespace pssid\n')
-    
-
-
-# def execute_batch(batch):  # previously called def execute_job(job, ssid_profiles)
-    
-#     for ssid in batch["ssid_profiles"]:
-        
-#         # build process
-#         build_netns_and_layers()
-
-#         print('\n>>>>>>>>>>>> run wget test') 
-#         test_simulation_command = f"wget -P /home/dianluhe www.google.com"
-#         wget_process = subprocess.run(test_simulation_command, shell=True, check=True, capture_output=True, text=True)    
-#         syslog.syslog(syslog.LOG_INFO, f"Run wget, return code: {wget_process.returncode}")
-
-#         # teardown process
-#         teardown_netns_and_layers()
-
+  
 
 def execute_batch(batch): 
     
@@ -791,7 +699,6 @@ def main():
     # evaluate cli arguments
     args = parser.parse_args()
 
-
     # if args.debug
     # either implement here, or put the in the class Daemon's constructor  
          
@@ -809,14 +716,16 @@ def main():
     metadata_set = set()
     s = sched.scheduler(time.time, time.sleep)
     scheduled_batches = set()
-    # open syslog
-    syslog.openlog(ident='pssid', facility=syslog.LOG_LOCAL0)  # default to local0, able to implement in cli .
 
+    # open syslog with ident 'pssid' and facility LOG_LOCAL0
+    syslog.openlog(ident='pssid', facility=syslog.LOG_LOCAL0) 
+
+    # load and process the json configuration file 
     pssid_conf_json = load_json(pssid_config_path)
     s, metadata_set = process_gui_conf(pssid_conf_json, s, metadata_set, hostname, scheduled_batches)
 
+    # print metadata set
     print_metadat_set(metadata_set)
-    # print('\n')
 
     # check if the scheudle is empty
     if s is None:
