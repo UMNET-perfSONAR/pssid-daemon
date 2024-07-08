@@ -47,7 +47,6 @@ def load_json(filename):
 
 # get device information 
 def get_hostname():
-    print("get hostname func called")
     try:
         hostname = socket.gethostname()
         return hostname
@@ -71,30 +70,19 @@ def find_matching_regex(regexes, hostname):
 
 
 def run_batch(s, batch, data, cron_expression, scheduled_batches):
-    
-    print('\n')
     batch_name = batch["name"]
-    print(f"Running batch at {datetime.datetime.now()} of batch {batch['name']} with cron_expression {cron_expression}")   # syslog at info level
+    print(f"\nRunning batch at {datetime.datetime.now()}, batch name: {batch['name']}, cron_expression: {cron_expression}")   # syslog at info level
     syslog.syslog(syslog.LOG_INFO, f"Running batch at {datetime.datetime.now()} of name of {batch_name} with cron_expression {cron_expression}")
     # perform test
     execute_batch(batch)
     schedule_batch(s, batch, data, scheduled_batches)
     
 
+
 def schedule_batch(s, batch, data, scheduled_batches):
-
-    # print('007007007')
-    # for item in scheduled_batches:
-    #     print(item)
-
     earliest_next_run_time = None
     batch_name = batch["name"]
 
-    # if batch_name in scheduled_batches:
-    #     print(f"Batch '{batch_name}' scheduled already.")
-    #     syslog.syslog(syslog.LOG_WARNING, f"Batch '{batch_name}' already scheduled.")
-    #     return
-    
     # print("schedule_batch:", batch_name)
     for schedule_name in batch["schedules"]:
         cron_expression = None
@@ -135,9 +123,6 @@ def schedule_batch(s, batch, data, scheduled_batches):
         s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (s, batch, data, earliest_cron_expression, scheduled_batches))
         scheduled_batches.add(batch_name)
 
-       
-def find_phy0():
-    pass
 
 def batch_variable_substition(batch, data):
     pass
@@ -222,29 +207,14 @@ def batch_variable_substition(batch, data):
 #     return transformed_job_list
 
 
-    
-# add batches
-# 
+
 def initilize_batches(batch_name_list, data, s, scheduled_batches):
-
-    
-    
-
     for batch_name in batch_name_list:
-        # check s batch name , if found ,return
-        # for event in s.queue:
-        #     print(event)
-        #     if event[3] == batch_name:
-        #         continue
-
-        # if batch_name in s.queue:
-        #     syslog.syslog(syslog.LOG_WARNING, f"Batch '{batch_name}' already scheduled.")
-        #     continue
+        # filter out the batch that is already scheduled
         if batch_name in scheduled_batches:
-            print(f"Batch '{batch_name}' scheduled already.")
+            #print(f"Batch '{batch_name}' scheduled already.")
             syslog.syslog(syslog.LOG_WARNING, f"Batch '{batch_name}' already scheduled.")
             return
-
 
         # find the batch by name
         batch = next((b for b in data['batches'] if b['name'] == batch_name), None)
@@ -263,8 +233,6 @@ def initilize_batches(batch_name_list, data, s, scheduled_batches):
         # transformed_job_list = transform_job_list_for_batch_processing(batch, data)
 
         # batch.setdefault("transformed_data", []).extend(transformed_job_list)
-        
-
         schedule_batch(s, batch, data, scheduled_batches)
             
 
@@ -278,14 +246,6 @@ def add_metadata(metadata_list, metadata_set, origin):
             existing_lhs.add(lhs) # update the lhs
 
 
-# def get_test_interface(metadata_set):  # deleted query as a parameter !
-#     target_wireless_interface = None
-#     for entry in metadata_set:
-#         if entry[0] == 'interface':
-#             target_wireless_interface = entry[1]
-#     return target_wireless_interface
-
-
 
 def process_gui_conf(data, s, metadata_set, hostname, scheduled_batches):
     host_match = None
@@ -294,9 +254,7 @@ def process_gui_conf(data, s, metadata_set, hostname, scheduled_batches):
             host_match = host["name"]
             initilize_batches(host["batches"], data, s, scheduled_batches)
             add_metadata(host["data"].items(), metadata_set, host["name"])
-
             syslog.syslog(syslog.LOG_INFO, f"Host {hostname} identified in hosts")
-
 
     # syslog warning if no match
     if host_match == None: 
@@ -309,7 +267,6 @@ def process_gui_conf(data, s, metadata_set, hostname, scheduled_batches):
         if host in group["hosts"] or find_matching_regex(group["hosts_regex"], host_match):
             initilize_batches(group["batches"], data, s, scheduled_batches)
             add_metadata(group["data"].items(), metadata_set, group["name"])
-
             syslog.syslog(syslog.LOG_INFO, f"Host {hostname} identified in {group_name} group")
 
     return s, metadata_set
@@ -317,34 +274,15 @@ def process_gui_conf(data, s, metadata_set, hostname, scheduled_batches):
 
 
 def print_metadat_set(metadata_set):
-    print("**************************************")
-    print('metadata')
-    print("**************************************")
+    num_dash = 50
+    print("-" * num_dash)
+    print('Metadata')
+    print("-" * num_dash)
     for item in metadata_set:
         print(item)
-    print("**************************************")
+    print("-" * num_dash)
 
 
-
-# def execute_test(test_name):
-#     print(f"Executing test: {test_name}")
-#     # Split the test name to get the command and arguments
-#     test_args = test_name.split()
-#     pscheduler_command = ["pscheduler"] + test_args
-    
-#     try:
-#         # Run the pscheduler command and capture the output
-#         result = subprocess.run(pscheduler_command, capture_output=True, text=True)
-#         # print should go to syslog
-#         if result.returncode == 0:
-#             print(f"Test {test_name} succeeded:\n{result.stdout}")
-#             return True
-#         else:
-#             print(f"Test {test_name} failed:\n{result.stderr}")
-#             return False
-#     except Exception as e:
-#         print(f"Error executing test {test_name}: {e}")
-#         return False
 
 # obsolete
 def netns_delete():
@@ -427,7 +365,7 @@ def setup_netns(batch):
             create_namespace_command = f"ip netns add {namespace}"
             subprocess.run(create_namespace_command, shell=True, check=True)
             syslog.syslog(syslog.LOG_INFO, f"Create namespace {namespace}")
-            print(f'>>>>>>>>>>>> create namespace {namespace}\n')
+            print(f'>> create namespace {namespace}\n')
 
         except subprocess.CalledProcessError as e:
             print(f"Error setting up namespace for interface {interface}: {e}")
@@ -443,7 +381,7 @@ def setup_netns(batch):
             # bond interface with namespace pssid 
             bond_interface_namespace_command = f"iw {phy_name} set netns name {namespace}"
             subprocess.run(bond_interface_namespace_command, shell=True, check=True)
-            print(f'>>>>>>>>>>>> bond {interface} to {namespace}\n')
+            print(f'>> bond {interface} to {namespace}\n')
             syslog.syslog(syslog.LOG_INFO, f"Add interface {interface} to namespace {namespace}")
             
         except subprocess.CalledProcessError as e:
@@ -455,44 +393,32 @@ def setup_netns(batch):
     # check if there are processes in namespace
     netns_process_exists_command = f"ip netns pids {namespace}"
     netns_process_exists = subprocess.run(netns_process_exists_command, shell=True, capture_output=True, text=True)
-    print("netns_process_exists: ", netns_process_exists)
-    print('***                     *****                ****')
+    
     # kill all processes in namespace
-    if netns_process_exists.stdout.strip():
-        # try:
-        #     kill_netns_processes_command = f"ip netns pids {namespace} | xargs kill"
-        #     subprocess.run(kill_netns_processes_command, shell=True, check=True)
-        #     syslog.syslog(syslog.LOG_INFO, f"Killed processes in namespace {namespace} for initialization")
-        #     print(f'>>>>>>>>>>>> Killed processes in namespace {namespace} for reinitialization\n')
-        # except subprocess.CalledProcessError as e:
-        #     print(f"Error killing processes in namespace {namespace}")
-        #     syslog.syslog(syslog.LOG_ERR, f"Error killing processes in namespace {namespace} : {e}")
-        
+    if netns_process_exists.stdout.strip():        
         # make sure layer 2 and layer 3 tools are not running
-        # teardown l3
-        print('                         <<-----------------------------')
+        # force teardown l3
         try:
             teardown_layer3_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-dhcp -i {interface} -d"
             layer3_process = subprocess.run(teardown_layer3_tool_command, shell=True, check=False, capture_output=True, text=True)
-            syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp: {layer3_process.stdout.strip()}")
-            print('\n>>>>>>>>>>>> teardown layer 3')
+            # syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp: {layer3_process.stdout.strip()}")
+            print('\n>> clear netns layer 3')
         except subprocess.CalledProcessError as e:
-            print(f"Error tearing down layer 3")
-            syslog.syslog(syslog.LOG_ERR, f"Error tearing down layer 3")
+            print(f"Error init netns due to failure of tearing down layer 3")
+            syslog.syslog(syslog.LOG_ERR, f"Error init netns due to failture of tearing down layer 3")
+            return
             
-        
-        # teardown l2
+        # force teardown l2  # check set to false 
         try:
             teardown_layer2_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_supplicant_Mwireless.conf -i {interface} -d"
             layer2_process = subprocess.run(teardown_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
-            syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
-            print('\n>>>>>>>>>>>> teardown layer 2')
+            # syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
+            print('\n>> clear netns layer 2')
         except subprocess.CalledProcessError as e:
-            print(f"Error tearing down layer 2")
-            syslog.syslog(syslog.LOG_ERR, f"Error tearing down layer 2")
+            print(f"Error init netns due to failure of tearing down layer 2")
+            syslog.syslog(syslog.LOG_ERR, f"Error init netns due to failure of tearing down layer 2")
             return
-        
-        print('                         ----------------------------->>')
+    
 
     
     # remove existing resolv.conf in namespace
@@ -501,7 +427,7 @@ def setup_netns(batch):
             rm_existing_resolv_conf_command = f"rm /etc/netns/{namespace}/resolv.conf" # possible remaining resolv.conf after interupted pssid-daemon, the file might be the one copied from /tmp/resolv.conf to /etc/resolv.conf in previous run 
             subprocess.run(rm_existing_resolv_conf_command, shell=True, check=False) # ignore error if file not found
             syslog.syslog(syslog.LOG_INFO, f"Remove existing resolv.conf in namespace {namespace}")
-            print(f'>>>>>>>>>>>> Remove existing resolv.conf in namespace {namespace}\n')
+            print(f'>> Remove existing resolv.conf in namespace {namespace}\n')
         except subprocess.CalledProcessError as e:
             print(f"Error removing existing resolv.conf in namespace {namespace}")
             syslog.syslog(syslog.LOG_ERR, f"Error removing existing resolv.conf in namespace {namespace} : {e}")
@@ -517,26 +443,29 @@ def process_on_layer_2(batch, ssid_profile):
         # print("debug: ",build_layer2_tool_command)
         layer2_process = subprocess.run(build_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
         syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
-        print('>>>>>>>>>>>> build layer 2\n')
+        print('\n>> built layer 2')
 
     except subprocess.CalledProcessError as e:
-        print(f"Error building layer 2")
-        syslog.syslog(syslog.LOG_ERR, f"Error building layer 2-------------")
+        print(f"Error in building layer 2")
+        syslog.syslog(syslog.LOG_ERR, f"Error in building layer 2")
         return
     
     process_on_layer_3(batch)
 
     try:
-        # teardown l2
+        # tear down l2
         teardown_layer2_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_supplicant_{ssid_profile}.conf -i {interface} -d"
         layer2_process = subprocess.run(teardown_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
         syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
-        print('\n>>>>>>>>>>>> tear down layer 2')
+        print('\n>> tore down layer 2')
 
     except subprocess.CalledProcessError as e:
         print(f"Error building layer 2")
         syslog.syslog(syslog.LOG_ERR, f"Error tearing down layer 2")
+
+    print('\n>> continue ...\n')
         
+
 
 def debug_resolv_conf():
     # subprocess ls -l /etc/resolv.conf
@@ -568,33 +497,29 @@ def debug_resolv_conf():
 
     
     
-    
-
 def process_on_layer_3(batch):
     
     interface = batch["test_interface"]
     namespace = f"pssid_{interface}"
+    
     try:
         # copy original /etc/resolv.conf to a temp location /tmp/resolv.conf
         copy_resolv_conf_command = f"cp /etc/resolv.conf /tmp/"
         subprocess.run(copy_resolv_conf_command, shell=True, check=True)
-        print("start layer 3 func")
-        print(f"Successfully copied /etc/resolv.conf to /tmp/resolv.conf ")
+        
+        print(f"\n>> copied /etc/resolv.conf to /tmp/resolv.conf ")
         
     except subprocess.CalledProcessError as e:
         syslog.syslog(syslog.LOG_INFO, f"Failed to copy default namespace's /etc/resolv.conf to /tmp/resolv.conf")
         return
     
-    # print("debug function called before calling layer 3 tool") 
-    # debug_resolv_conf()
+    # debug_resolv_conf() # for debugging
     
-
     try:
-        # call layer 3 tool ###########################
-        
+        # call layer 3 tool
         build_layer3_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-dhcp -i {interface}"
         layer3_process = subprocess.run(build_layer3_tool_command, shell=True, check=True, capture_output=True, text=True)
-        print('\n>>>>>>>>>>>> build layer 3')
+        print('\n>> built layer 3')
         syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp: {layer3_process.stdout.strip()}")
 
     except subprocess.CalledProcessError as e:
@@ -604,11 +529,9 @@ def process_on_layer_3(batch):
         syslog.syslog(syslog.LOG_ERR, f"Error building layer 3")
         return
     
-    # print("debug function called AFTER calling layer 3 tool") 
-    # debug_resolv_conf()
+    # debug_resolv_conf() # for debugging
 
     try:
-        print("marker------------A")
         # make a directory /etc/netns/{namespace}/
         make_directory_command = f"mkdir -p /etc/netns/{namespace}/"
         subprocess.run(make_directory_command, shell=True, check=True)
@@ -616,132 +539,60 @@ def process_on_layer_3(batch):
         # copy layer3 generated /etc/resolv.conf to /etc/netns/{namespace}/resolv.conf
         copy_resolv_conf_command = f"cp /etc/resolv.conf /etc/netns/{namespace}/"
         subprocess.run(copy_resolv_conf_command, shell=True, check=True)
-        print(f"Successfully copied /etc/resolv.conf to /etc/netns/{namespace}/resolv.conf ")
+        print(f"\n>> copied /etc/resolv.conf to /etc/netns/{namespace}/resolv.conf")
     
     except subprocess.CalledProcessError as e:
         print(f"failed to copy /etc/resolv.conf to /etc/netns/{namespace}/resolv.conf")
         syslog.syslog(syslog.LOG_ERR, f"Failed to copy /etc/resolv.conf to /etc/netns/{namespace}/resolv.conf")
         return
     
-    print(f"debug function called after copy resolv.conf to /etc/netns/{namespace}/resolv.conf") 
-
-    debug_resolv_conf()
+    # debug_resolv_conf() # for debugging
 
     try:
         # copy original /tmp/resolv.conf to /etc/resolv.conf to solve DNS issue
         copy_resolv_conf_command = f"cp /tmp/resolv.conf /etc/"
         subprocess.run(copy_resolv_conf_command, shell=True, check=True)
+        print(f"\n>> copied /tmp/resolv.conf to /etc/resolv.conf")
 
     except subprocess.CalledProcessError as e:
         syslog.syslog(syslog.LOG_ERR, f"Failed to copy /tmp/resolv.conf to /etc/resolv.conf")
         return
     
-    print('\n>>>>>>>>>>>> run wget test') 
+    print('\n>> run wget test') 
     test_simulation_command = f"ip netns exec {namespace} wget -P /home/dianluhe www.google.com"
     wget_process = subprocess.run(test_simulation_command, shell=True, check=True, capture_output=True, text=True)    
     syslog.syslog(syslog.LOG_INFO, f"Run wget, return code: {wget_process.returncode}")
 
-
     try:
         # teardown l3
-       
         teardown_layer3_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-dhcp -i {interface} -d"
         layer3_process = subprocess.run(teardown_layer3_tool_command, shell=True, check=True, capture_output=True, text=True)
-        print('\n>>>>>>>>>>>> teardown layer 3')
+        print('\n>> tore down layer 3')
         syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp: {layer3_process.stdout.strip()}")
 
     except subprocess.CalledProcessError as e:
-        print(f"Error tearing down layer 3")
-        syslog.syslog(syslog.LOG_ERR, f"Error tearing down layer 3")
+        print(f"Error in tearing down layer 3")
+        syslog.syslog(syslog.LOG_ERR, f"Error in tearing down layer 3")
         return
     
     try:
         deltete_resolv_conf_command = f"rm /etc/netns/{namespace}/resolv.conf"
         subprocess.run(deltete_resolv_conf_command, shell=True, check=True)
-        print(f"Successfully deleted /etc/netns/{namespace}/resolv.conf ")
+        print(f"\n>> deleted /etc/netns/{namespace}/resolv.conf ")
     except subprocess.CalledProcessError as e:
         syslog.syslog(syslog.LOG_ERR, f"Failed to delete /etc/netns/{namespace}/resolv.conf")
         return
 
-
-
-
-#/etc/wpa_supplicant/wpa_M.conf
-# pyh0 is hard coded now, need change. a lookup table is needed. 
-# local
-def build_netns_and_layers(interface='wlan0', wpa_file='/etc/wpa_supplicant/wpa_M.conf'):     # take wpa_supplicant config file       interface default value :  wlan0, 
-    # create namespace pssid 
-    create_namespace_command = f"ip netns add pssid"
-    subprocess.run(create_namespace_command, shell=True, check=True)
-    print('>>>>>>>>>>>> create namespace pssid\n')
-
-    # bond interface with namespace pssid 
-    print('>>>>>>>>>>>> bond interface to namespace\n')
-    bond_interface_namespace_command = f"iw phy0 set netns name pssid"
-    subprocess.run(bond_interface_namespace_command, shell=True, check=True)
-    syslog.syslog(syslog.LOG_INFO, f"Create namespace pssid and bond with interface {interface}")
-
-    # call layer 2 tool 
-    print('>>>>>>>>>>>> build layer 2')
-    build_layer2_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-80211 -c {wpa_file} -i {interface}"
-    layer2_process = subprocess.run(build_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
-    syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
-
-    # call layer 3 tool 
-    print('\n>>>>>>>>>>>> build layer 3')
-    build_layer3_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-dhcp -i {interface}"
-    layer3_process = subprocess.run(build_layer3_tool_command, shell=True, check=True, capture_output=True, text=True)
-    syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp: {layer3_process.stdout.strip()}")
-
-
-
-def teardown_netns_and_layers(interface='wlan0', wpa_file='/etc/wpa_supplicant/wpa_M.conf'):
-    # teardown l3
-    print('\n>>>>>>>>>>>> teardown layer 3')
-    teardown_layer3_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-dhcp -i {interface} -d"
-    layer3_process = subprocess.run(teardown_layer3_tool_command, shell=True, check=True, capture_output=True, text=True)
-    syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp: {layer3_process.stdout.strip()}")
-    
-    # teardown l2
-    print('\n>>>>>>>>>>>> teardown layer 2')
-    teardown_layer2_tool_command = f"ip netns exec pssid /usr/lib/exec/pssid/pssid-80211 -c {wpa_file} -i {interface} -d"
-    layer2_process = subprocess.run(teardown_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
-    syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
-    
-    # delete namespace pssid using command line
-    create_namespace_command = f"ip netns delete pssid"
-    subprocess.run(create_namespace_command, shell=True, check=True)
-    print('\n>>>>>>>>>>>> delete namespace pssid\n')
-    
-
-
-# def execute_batch(batch):  # previously called def execute_job(job, ssid_profiles)
-    
-#     for ssid in batch["ssid_profiles"]:
-        
-#         # build process
-#         build_netns_and_layers()
-
-#         print('\n>>>>>>>>>>>> run wget test') 
-#         test_simulation_command = f"wget -P /home/dianluhe www.google.com"
-#         wget_process = subprocess.run(test_simulation_command, shell=True, check=True, capture_output=True, text=True)    
-#         syslog.syslog(syslog.LOG_INFO, f"Run wget, return code: {wget_process.returncode}")
-
-#         # teardown process
-#         teardown_netns_and_layers()
-
+  
 
 def execute_batch(batch): 
     
     for ssid in batch["ssid_profiles"]:
-
         setup_netns(batch)
-        
         # build process
         process_on_layer_2(batch, ssid)
 
     
-
 
 # def copy_execute_batches(batch, metadata_set, data):  # previously called def execute_job(job, ssid_profiles)
 #     target_wireless_interface = get_test_interface(metadata_set)
@@ -791,7 +642,6 @@ def main():
     # evaluate cli arguments
     args = parser.parse_args()
 
-
     # if args.debug
     # either implement here, or put the in the class Daemon's constructor  
          
@@ -809,14 +659,16 @@ def main():
     metadata_set = set()
     s = sched.scheduler(time.time, time.sleep)
     scheduled_batches = set()
-    # open syslog
-    syslog.openlog(ident='pssid', facility=syslog.LOG_LOCAL0)  # default to local0, able to implement in cli .
 
+    # open syslog with ident 'pssid' and facility LOG_LOCAL0
+    syslog.openlog(ident='pssid', facility=syslog.LOG_LOCAL0) 
+
+    # load and process the json configuration file 
     pssid_conf_json = load_json(pssid_config_path)
     s, metadata_set = process_gui_conf(pssid_conf_json, s, metadata_set, hostname, scheduled_batches)
 
+    # print metadata set
     print_metadat_set(metadata_set)
-    # print('\n')
 
     # check if the scheudle is empty
     if s is None:
