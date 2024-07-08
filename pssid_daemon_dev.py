@@ -47,7 +47,6 @@ def load_json(filename):
 
 # get device information 
 def get_hostname():
-    print("get hostname func called")
     try:
         hostname = socket.gethostname()
         return hostname
