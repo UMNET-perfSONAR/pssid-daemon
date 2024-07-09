@@ -26,6 +26,13 @@ def main():
             "spec": {
             "dest": "www.yahoo.com"
             }
+        },
+           {
+            "name": "rtt_yahoo",
+            "type": "rtt",
+            "spec": {
+            "dest": "www.yahoo.com"
+            }
         }
         ],
         "jobs": [
@@ -36,6 +43,7 @@ def main():
             "http_google",
             "trace_google",
             "throughput_yahoo",
+            "rtt_yahoo",
             ],
             "continue-if": "true"
         },
@@ -311,5 +319,26 @@ def main():
 
     print(json.dumps(transformed_job_list, indent=2))
 
+
+        # Add transformed_job_list to batch under transformed_data
+    batch.setdefault("transformed_data", []).extend(transformed_job_list)
+
+    # Print or use batch dictionary with transformed_data added
+    print(json.dumps(batch, indent=2))
+
+    # Create a new batch object with transformed_data inserted after jobs
+    new_batch = {
+        "schema": 3,
+        "jobs": batch["transformed_data"],
+        
+    }
+    print('this is the new batch')
+    # Print or use new_batch object
+    print(json.dumps(new_batch, indent=2))
+
+
+
 if __name__ == "__main__":
     main()
+
+
