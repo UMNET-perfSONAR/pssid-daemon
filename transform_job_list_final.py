@@ -2,6 +2,7 @@ import json
 from jinja2 import Template
 
 
+
 def main():
 
     data = {
@@ -40,9 +41,9 @@ def main():
             "name": "job_http_google",
             "parallel": "True",
             "tests": [
-            "http_google",
-            "trace_google",
-            "throughput_yahoo",
+            # "http_google",
+            # "trace_google",
+            # "throughput_yahoo",
             "rtt_yahoo",
             ],
             "continue-if": "true"
@@ -94,7 +95,7 @@ def main():
     template_str_for_throughput = """
     {
         "label": "{{job_label}}",
-        "iterations": "{{iteration}}",
+        "iterations": {{iteration}},
         "parallel": "False",
         "backoff": "PT1M",
         "task": {
@@ -228,9 +229,9 @@ def main():
     template_str_for_non_throughput = """
 {
     "label": "{{job_label}}",
-    "iterations": "{{iteration}}",
+    "iterations": {{iteration}},
     "parallel": "{{parallel}}",
-    "backoff": "PT1M",
+    "backoff": "PT1S",
     "task": {
         "reference" : {
             "tasks" : [
@@ -238,7 +239,6 @@ def main():
                 {
                     "schema": 2,
                     "test": {
-                        "name" : "{{test.name}}",
                         "type" : "{{test.type}}",
                         "spec" : {
                             {% for key, value in test.spec.items() %}
@@ -247,6 +247,7 @@ def main():
                         }
                     },
                     "contexts": {
+                        "schema": 1,
                         "contexts": [
                             [
                                 {
@@ -256,8 +257,8 @@ def main():
                                     }
                                 }
                             ]
-                        ],
-                        "schema": 1
+                        ]
+                    
                     }
                 }{% if not loop.last %},{% endif %}
                 {% endfor %}
@@ -289,6 +290,9 @@ def main():
         job_label = job['name']
         tests_list = job['tests']
         parallel = job['parallel']
+        # parallel = bool(parallel)
+        print("type of parallel",type(parallel))
+        print("parallel",parallel)
 
         for test_name in tests_list:
             test = next((t for t in data['tests'] if t['name'] == test_name), None)
@@ -304,6 +308,7 @@ def main():
                 transformed_data_str = template.render(job_label=job_label, test=test, iteration=iteration, parallel=parallel)
                 transformed_data = json.loads(transformed_data_str)
                 transformed_job_list.append(transformed_data)
+                
 
 
             else:
@@ -311,30 +316,73 @@ def main():
                 
 
         if non_throughput_tests:
+            # template = Template(template_str_for_non_throughput)
+            # iteration = non_throughput_tests.__len__()
+            # transformed_data_str = template.render(job_label=job_label, tests=non_throughput_tests, iteration=iteration, parallel=parallel)
+            # # print('this is the transformed_data_str')
+            # # print(transformed_data_str)
+            # transformed_data = json.loads(transformed_data_str)
+            # # print('this is the transformed_data, suposed to be a dictionary')
+            # # print(transformed_data)
+            # transformed_job_list.append(transformed_data)
+
             template = Template(template_str_for_non_throughput)
             iteration = non_throughput_tests.__len__()
             transformed_data_str = template.render(job_label=job_label, tests=non_throughput_tests, iteration=iteration, parallel=parallel)
+            # print(transformed_data_str)
             transformed_data = json.loads(transformed_data_str)
-            transformed_job_list.append(transformed_data)
+            # formatted_json_str = json.dumps(transformed_data, indent=4)
 
-    print(json.dumps(transformed_job_list, indent=2))
+            transformed_job_list.append(transformed_data) 
+       
+            # print(transformed_job_list)
+
+    # print(json.dumps(transformed_job_list, indent=2))
 
 
         # Add transformed_job_list to batch under transformed_data
     batch.setdefault("transformed_data", []).extend(transformed_job_list)
 
     # Print or use batch dictionary with transformed_data added
-    print(json.dumps(batch, indent=2))
+    # print(json.dumps(batch, indent=2))
 
     # Create a new batch object with transformed_data inserted after jobs
-    new_batch = {
-        "schema": 3,
-        "jobs": batch["transformed_data"],
+    # new_batch = {
+    #     "schema": 3,
+    #     "jobs": batch["transformed_data"],
         
-    }
-    print('this is the new batch')
+    # }
+    # print('this is the new batch')
+
+    
     # Print or use new_batch object
-    print(json.dumps(new_batch, indent=2))
+    # print(json.dumps(new_batch, indent=2))
+
+    
+
+
+
+    new_batch = {
+    "schema": 3,
+    "jobs": []
+    }
+
+    # Iterate through transformed_data in batch
+    for job in batch["transformed_data"]:
+        # Convert "parallel" from string to boolean if necessary
+        if "parallel" in job:
+            if job["parallel"] == "True":
+                job["parallel"] = True
+            elif job["parallel"] == "False":
+                job["parallel"] = False
+        
+        # Append the processed job to new_batch["jobs"]
+        new_batch["jobs"].append(job)
+
+
+    print('this is the new batch')
+    print(new_batch)
+    print(json.dumps(new_batch, indent=4))
 
 
 
