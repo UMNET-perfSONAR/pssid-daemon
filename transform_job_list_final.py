@@ -340,7 +340,7 @@ def main():
     # print(json.dumps(transformed_job_list, indent=2))
 
 
-        # Add transformed_job_list to batch under transformed_data
+    # Add transformed_job_list to batch under transformed_data
     batch.setdefault("transformed_data", []).extend(transformed_job_list)
 
     # Print or use batch dictionary with transformed_data added
@@ -380,8 +380,10 @@ def main():
         new_batch["jobs"].append(job)
 
 
-    print('this is the new batch')
+    # new batch object with Python literals for batch processor consumption
     print(new_batch)
+
+    # print the new batch in json format, not for batch processor consumption
     print(json.dumps(new_batch, indent=4))
 
 
