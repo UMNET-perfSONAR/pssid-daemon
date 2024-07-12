@@ -163,15 +163,17 @@ def main():
                                 ]
                             {% endif %}
                         },
-                        "schema": 1,
-                        "archives": {
-                            "archiver": "syslog",
-                            "data": {
-                                "ident": "pssid",
-                                "facility": "local0",
-                                "priority": "info"
+                        "archives": [
+                            {
+                                "archiver": "syslog",
+                                "data": {
+                                    "ident": "pssid",
+                                    "facility": "local0",
+                                    "priority": "info"
+                                }
                             }
-                        }
+                        ]
+                        
                     }{% if not loop.last %},{% endif %}
                     {% endfor %}
                 ]
