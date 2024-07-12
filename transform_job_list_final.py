@@ -53,7 +53,7 @@ def main():
             #  "rtt_yahoo",
             "throughput_arbl",
             # "rtt_yahoo",
-            "rtt_google",
+            # "rtt_google",
             ],
             "continue-if": "true"
         },
@@ -106,7 +106,7 @@ def main():
         ],
         "jobs": [
           "job_http_google",
-          "job2"
+        #   "job2"
         ],
         "archivers": [
           "syslog"
@@ -162,6 +162,15 @@ def main():
                                     ]
                                 ]
                             {% endif %}
+                        },
+                        "schema": 1,
+                        "archives": {
+                            "archiver": "syslog",
+                            "data": {
+                                "ident": "pssid",
+                                "facility": "local0",
+                                "priority": "info"
+                            }
                         }
                     }{% if not loop.last %},{% endif %}
                     {% endfor %}
