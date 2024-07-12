@@ -29,6 +29,8 @@ import time
 import os
 from croniter import croniter
 from jinja2 import Template
+import pscheduler.batchprocessor
+
 
 # currently not object oriented
 # class Daemon:
@@ -70,17 +72,27 @@ def find_matching_regex(regexes, hostname):
 
 
 
-def run_batch(s, batch, data, cron_expression, scheduled_batches):
+# def run_batch(s, batch, data, cron_expression, scheduled_batches):
+#     batch_name = batch["name"]
+#     print(f"\nRunning batch at {datetime.datetime.now()}, batch name: {batch['name']}, cron_expression: {cron_expression}")   # syslog at info level
+#     syslog.syslog(syslog.LOG_INFO, f"Running batch at {datetime.datetime.now()} of name of {batch_name} with cron_expression {cron_expression}")
+#     # perform test
+#     execute_batch(batch)
+#     schedule_batch(s, batch, data, scheduled_batches)
+
+def run_batch(s, batch, data, cron_expression):
     batch_name = batch["name"]
     print(f"\nRunning batch at {datetime.datetime.now()}, batch name: {batch['name']}, cron_expression: {cron_expression}")   # syslog at info level
     syslog.syslog(syslog.LOG_INFO, f"Running batch at {datetime.datetime.now()} of name of {batch_name} with cron_expression {cron_expression}")
     # perform test
     execute_batch(batch)
-    schedule_batch(s, batch, data, scheduled_batches)
+    schedule_batch(s, batch, data)
     
 
 
-def schedule_batch(s, batch, data, scheduled_batches):
+# def schedule_batch(s, batch, data, scheduled_batches):
+def schedule_batch(s, batch, data):
+
     earliest_next_run_time = None
     batch_name = batch["name"]
 
@@ -118,12 +130,16 @@ def schedule_batch(s, batch, data, scheduled_batches):
     else:
         #print('earliest_next_run_time: ', earliest_next_run_time) 
         syslog.syslog(syslog.LOG_INFO, f"Schedule batch '{batch_name}', earlist next run time: {earliest_next_run_time}, cron expression: {earliest_cron_expression}")
-        # print('\n') # for debugging
-        # s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (s, batch, data, earliest_cron_expression))
-        # kwargs = {"batch_name": batch_name}
-        s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (s, batch, data, earliest_cron_expression, scheduled_batches))
+      
+        # s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (s, batch, data, earliest_cron_expression, scheduled_batches))
 
-        scheduled_batches.add(batch_name)
+        s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (s, batch, data, earliest_cron_expression))
+
+
+
+
+        #$$
+        # scheduled_batches.add(batch_name)
 
 
 def batch_variable_substition(batch, data):
@@ -183,7 +199,13 @@ def transform_job_list_for_batch_processing(batch, data):
 
 
 
-def initilize_batches(batch_name_list, data, s, scheduled_batches):
+def initilize_batch_list(batch_name_list, scheduled_batches):
+    for batch_name in batch_name_list:
+        scheduled_batches.add(batch_name)
+
+
+# -- obsolete
+def obsolete_initilize_batches(batch_name_list, data, s, scheduled_batches):
     for batch_name in batch_name_list:
         # filter out the batch that is already scheduled
         if batch_name in scheduled_batches:
@@ -197,14 +219,14 @@ def initilize_batches(batch_name_list, data, s, scheduled_batches):
             syslog.syslog(syslog.LOG_WARNING, f"Batch '{batch_name}' not found.")
             continue
         
-        batch, valid_Batch = transform_job_list_for_batch_processing(batch, data)
-        if not valid_Batch:
-            syslog.syslog(syslog.LOG_ERR, f"Batch '{batch_name}' is invalid.")
-            return
+        # batch, valid_Batch = transform_job_list_for_batch_processing(batch, data)
+        # if not valid_Batch:
+        #     syslog.syslog(syslog.LOG_ERR, f"Batch '{batch_name}' is invalid.")
+        #     return
 
         # batch.setdefault("transformed_data", []).extend(transformed_job_list)
         schedule_batch(s, batch, data, scheduled_batches)
-    
+# -- obsolete 
             
 
 
@@ -218,12 +240,12 @@ def add_metadata(metadata_list, metadata_set, origin):
 
 
 
-def process_gui_conf(data, s, metadata_set, hostname, scheduled_batches):
+def process_gui_conf(data, s, metadata_set, hostname, identified_batch_list):
     host_match = None
     for host in data["hosts"]:
         if host["name"] == hostname:
             host_match = host["name"]
-            initilize_batches(host["batches"], data, s, scheduled_batches)
+            initilize_batch_list(host["batches"], identified_batch_list)
             add_metadata(host["data"].items(), metadata_set, host["name"])
             syslog.syslog(syslog.LOG_INFO, f"Host {hostname} identified in hosts")
 
@@ -236,15 +258,31 @@ def process_gui_conf(data, s, metadata_set, hostname, scheduled_batches):
     for group in data["host_groups"]:
         group_name = group["name"]
         if host in group["hosts"] or find_matching_regex(group["hosts_regex"], host_match):
-            initilize_batches(group["batches"], data, s, scheduled_batches)
+            initilize_batch_list(group["batches"], identified_batch_list)
             add_metadata(group["data"].items(), metadata_set, group["name"])
             syslog.syslog(syslog.LOG_INFO, f"Host {hostname} identified in {group_name} group")
 
     # for each batch name in set validate and schedule
+    for batch_name in identified_batch_list:
+        # find the batch by name
+        batch = next((b for b in data['batches'] if b['name'] == batch_name), None)
+        if batch is None:
+            syslog.syslog(syslog.LOG_WARNING, f"Batch '{batch_name}' not found.")
+            continue
+        # transform the jobs in batch for batch processing
+        batch, valid_Batch = transform_job_list_for_batch_processing(batch, data)
+        if not valid_Batch:
+            syslog.syslog(syslog.LOG_ERR, f"Batch '{batch_name}' is invalid.")
+            return
+        
+        schedule_batch(s, batch, data)
 
     # check if the scehduled batches are empty here $$
+    if not identified_batch_list:
+        syslog.syslog(syslog.LOG_ERR, f"No batch found.")
+        sys.exit
 
-
+    #$$ if check schedule set above, then no need to return s
     return s, metadata_set
 
 
@@ -534,10 +572,16 @@ def process_on_layer_3(batch):
         syslog.syslog(syslog.LOG_ERR, f"Failed to copy /tmp/resolv.conf to /etc/resolv.conf")
         return
     
-    print('\n>> run wget test') 
-    test_simulation_command = f"ip netns exec {namespace} wget -P /home/dianluhe www.google.com"
-    wget_process = subprocess.run(test_simulation_command, shell=True, check=True, capture_output=True, text=True)    
-    syslog.syslog(syslog.LOG_INFO, f"Run wget, return code: {wget_process.returncode}")
+
+    #$$ ---
+    # print('\n>> run wget test') 
+    # test_simulation_command = f"ip netns exec {namespace} wget -P /home/dianluhe www.google.com"
+    # wget_process = subprocess.run(test_simulation_command, shell=True, check=True, capture_output=True, text=True)    
+    # syslog.syslog(syslog.LOG_INFO, f"Run wget, return code: {wget_process.returncode}")
+
+    # run batch processor
+    run_batch_processor(batch)
+    #$$ ---
 
     try:
         # teardown l3
@@ -567,6 +611,24 @@ def execute_batch(batch):
         setup_netns(batch)
         # build process
         process_on_layer_2(batch, ssid)
+
+
+def debug(message):
+    """
+    Callback function for the batch processor to emit a line of
+    debug.
+    """
+    print(message, file=sys.stderr)
+
+def run_batch_processor(batch):
+    # form the batch for batch processor
+    batch_4_batchProcessor = {
+    "schema": 3,
+    "jobs": batch["batch_4_batchProcessor"]
+    }
+
+    processor = pscheduler.batchprocessor.BatchProcessor(batch_4_batchProcessor)
+    result = processor(debug=debug)
 
 
 
