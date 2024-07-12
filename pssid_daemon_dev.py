@@ -28,6 +28,7 @@ import sched
 import time
 import os
 from croniter import croniter
+from jinja2 import Template
 
 # currently not object oriented
 # class Daemon:
@@ -121,90 +122,64 @@ def schedule_batch(s, batch, data, scheduled_batches):
         # s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (s, batch, data, earliest_cron_expression))
         # kwargs = {"batch_name": batch_name}
         s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (s, batch, data, earliest_cron_expression, scheduled_batches))
+
         scheduled_batches.add(batch_name)
 
 
 def batch_variable_substition(batch, data):
     pass
 
-# def transform_job_list_for_batch_processing(batch, data):
+def transform_job_list_for_batch_processing(batch, data):
 
-#     # initialize list for transformed data
-#     transformed_job_list = []
+    with open('batch_processor_format_template.j2', 'r') as template_file:
+        template_str = template_file.read()
 
-#     # iterate through each job in the batch
-#     for job_name in batch["jobs"]:
-#         job = next((j for j in data['jobs'] if j['name'] == job_name), None)
-#         if job is None:
-#                 syslog.syslog(syslog.LOG_WARNING, f"Job '{job_name}' not found.")
-#                 batch["schedules"] = []
-#                 continue 
-                
-#         job_label = job['name']
-#         tests = job['tests']
+    transformed_job_list = []
+    job_tests = []
+    valid_Batch = True
 
-#         # construct transformed JSON based on perfsonar batch processing format
-#         transformed_data = {
-#             "label": job_label,
-#             "iterations": 1,
-#             "parallel": True,
-#             "backoff": "PT1M",
-#             "task": {
-#                 "reference": {
-#                     "tests": [
-#                         {
-#                             "type": tests[0]["type"],
-#                             "spec": tests[0]["spec"] 
-#                         }
-#                     ]
-#                 },
-#                 "#": "This is intentionally empty:",
-#                 "test": {}
-#             },
-#             "task-transform": {
-#                 "script": [
-#                     "# Replace the test section of the task with one of the",
-#                     "# tests in the reference block based on the iteration.",
-#                     ".test = .reference.tests[$iteration]"
-#                 ]
-#             }
-#         }
+    # Iterate through each job in the batch
+    for job_name in batch["jobs"]:
+        job = next((j for j in data['jobs'] if j['name'] == job_name), None)
+        if job is None:
+            validBatch = False
+            syslog.syslog(syslog.LOG_ERR, f"Job '{job_name}' not found.")
+            return valid_Batch
 
-#         # # construct transformed JSON based on perfsonar batch processing format
-#         # func beginning of a job
-#         # # transformed_data = {
-#         # #     "label": job_label,
-#         # #     "iterations": 1,
-#         # #     "parallel": True,
-#         # #     "backoff": "PT1M",
-#         # #     "task": {
-#         # #         "reference": {
-#         # #             "tests": [
-        
-#         #                 # func for each test in the job
-#         #                 {
-#         #                     "type": tests[0]["type"],
-#         #                     # for each spec 
-#         #                     # func for each specification 
-#         #                     "": tests[0]["spec"] 
-#         #                 }
-#         #             ]
-#         #         },
-#         #         "#": "This is intentionally empty:",
-#         #         "test": {}
-#         #     },
-#         #     "task-transform": {
-#         #         "script": [
-#         #             "# Replace the test section of the task with one of the",
-#         #             "# tests in the reference block based on the iteration.",
-#         #             ".test = .reference.tests[$iteration]"
-#         #         ]
-#         #     }
-#         # }
+        job_label = job['name']
+        tests_list = job['tests']
+        parallel = job['parallel']
 
-#         # append transformed data to a list
-#         transformed_job_list.append(transformed_data)
-#     return transformed_job_list
+        for test_name in tests_list:
+            test = next((t for t in data['tests'] if t['name'] == test_name), None)
+            if test is None:
+                validBatch = False
+                syslog.syslog(syslog.LOG_ERR, f"Test '{test_name}' not found.")
+                return valid_Batch
+
+            ## func to do variable substi
+  
+            job_tests.append(test)
+
+        template = Template(template_str)
+        iteration = job_tests.__len__()
+        transformed_data_str = template.render(job_label=job_label, tests=job_tests, iteration=iteration, parallel=parallel)
+        transformed_data = json.loads(transformed_data_str)
+        transformed_job_list.append(transformed_data) 
+       
+    # iterate through transformed_data in batch to update boolean literals to conform python object type (later formed batch_4_batchProcessor can be directly dump to pscheduler)
+    for job in transformed_job_list:
+        if "parallel" in job:
+            if job["parallel"] == "True":
+                job["parallel"] = True
+            elif job["parallel"] == "False":
+                job["parallel"] = False
+   
+    batch.setdefault("batch_4_batchProcessor", []).extend(transformed_job_list)
+
+    return batch, valid_Batch
+
+
 
 
 
@@ -222,18 +197,14 @@ def initilize_batches(batch_name_list, data, s, scheduled_batches):
             syslog.syslog(syslog.LOG_WARNING, f"Batch '{batch_name}' not found.")
             continue
         
-        # build batch string for pschduler 
-        # check if variable substition needed?  if undefined variable, warn, not add it. ssid substition,
-        # check the metadata set to update variable substitution
-        # in perf doc , if schema is required 
-
-        # func to do variable substi
-
-        # 
-        # transformed_job_list = transform_job_list_for_batch_processing(batch, data)
+        batch, valid_Batch = transform_job_list_for_batch_processing(batch, data)
+        if not valid_Batch:
+            syslog.syslog(syslog.LOG_ERR, f"Batch '{batch_name}' is invalid.")
+            return
 
         # batch.setdefault("transformed_data", []).extend(transformed_job_list)
         schedule_batch(s, batch, data, scheduled_batches)
+    
             
 
 
@@ -268,6 +239,11 @@ def process_gui_conf(data, s, metadata_set, hostname, scheduled_batches):
             initilize_batches(group["batches"], data, s, scheduled_batches)
             add_metadata(group["data"].items(), metadata_set, group["name"])
             syslog.syslog(syslog.LOG_INFO, f"Host {hostname} identified in {group_name} group")
+
+    # for each batch name in set validate and schedule
+
+    # check if the scehduled batches are empty here $$
+
 
     return s, metadata_set
 
@@ -592,33 +568,6 @@ def execute_batch(batch):
         # build process
         process_on_layer_2(batch, ssid)
 
-    
-
-# def copy_execute_batches(batch, metadata_set, data):  # previously called def execute_job(job, ssid_profiles)
-#     target_wireless_interface = get_test_interface(metadata_set)
-#     for ssid in batch["ssid_profiles"]:
-#         for job in batch["jobs"]:
-#             try:
-#                 build_netns_and_layers(target_wireless_interface)
-                
-#                 # simulation a test
-#                 print('\n>>>>>>>>>>>> run wget test')
-#                 test_simulation_command = f"wget -P /home/dianluhe www.google.com"
-#                 subprocess.run(test_simulation_command, shell=True, check=True)
-
-#                 # for job in data["jobs"]:
-#                 #     for test in job["tests"]:
-#                 #         if not execute_test(test):
-#                 #             if not job.get('continue-if', True):
-#                 #                 print("Job stopped due to test failure.")
-#                 #                 # to syslog
-#                 #                 break
-
-#                 teardown_netns_and_layers(target_wireless_interface)
-
-#             except subprocess.CalledProcessError as e:
-#                 print(f"Error executing command for SSID Mwireless: {e}")
-#                 # log error to syslog or handle as needed
 
 
 def main():
