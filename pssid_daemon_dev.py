@@ -142,10 +142,30 @@ def schedule_batch(s, batch, data):
         # scheduled_batches.add(batch_name)
 
 
-def batch_variable_substition(batch, data):
-    pass
+def variable_substitution(object, metadata_set):
+    substituted = True
+    # iterate through each key-value pair in a dictionary
+    for key, value in object.items():
+        if isinstance(value, str) and '$' in value:
+            # check if the value is a string and needs substitution
+            for lhs, rhs, origin in metadata_set:
+                if lhs in key:
+                    object[key] = rhs
+                else:
+                    substituted = False
+        elif isinstance(value, list):
+            # recursively process lists
+            for item in value:
+                if isinstance(item, dict):
+                    variable_substitution(item, metadata_set)
+        elif isinstance(value, dict):
+            # recursively process dictionaries
+            variable_substitution(value, metadata_set)
+    return object, substituted
 
-def transform_job_list_for_batch_processing(batch, data):
+
+
+def transform_job_list_for_batch_processing(batch, data, metadata_set):
 
     with open('batch_processor_format_template.j2', 'r') as template_file:
         template_str = template_file.read()
@@ -154,11 +174,18 @@ def transform_job_list_for_batch_processing(batch, data):
     job_tests = []
     valid_Batch = True
 
+    # Perform variable substitution on batch
+    batch, substituted = variable_substitution(batch, metadata_set)
+    if not substituted:
+        valid_Batch = False
+        syslog.syslog(syslog.LOG_ERR, f"Batch '{batch['name']}' has unresolved variables.")
+        return valid_Batch
+
     # Iterate through each job in the batch
     for job_name in batch["jobs"]:
         job = next((j for j in data['jobs'] if j['name'] == job_name), None)
         if job is None:
-            validBatch = False
+            valid_Batch = False
             syslog.syslog(syslog.LOG_ERR, f"Job '{job_name}' not found.")
             return valid_Batch
 
@@ -169,11 +196,16 @@ def transform_job_list_for_batch_processing(batch, data):
         for test_name in tests_list:
             test = next((t for t in data['tests'] if t['name'] == test_name), None)
             if test is None:
-                validBatch = False
+                valid_Batch = False
                 syslog.syslog(syslog.LOG_ERR, f"Test '{test_name}' not found.")
                 return valid_Batch
 
-            ## func to do variable substi
+            # Perform variable substitution on batch's test 
+            test, substituted = variable_substitution(test, metadata_set)
+            if not substituted:
+                valid_Batch = False
+                syslog.syslog(syslog.LOG_ERR, f"Test '{test['name']}' has unresolved variables.")
+                return valid_Batch
   
             job_tests.append(test)
 
@@ -194,8 +226,6 @@ def transform_job_list_for_batch_processing(batch, data):
     batch.setdefault("batch_4_batchProcessor", []).extend(transformed_job_list)
 
     return batch, valid_Batch
-
-
 
 
 
@@ -269,8 +299,9 @@ def process_gui_conf(data, s, metadata_set, hostname, identified_batch_list):
         if batch is None:
             syslog.syslog(syslog.LOG_WARNING, f"Batch '{batch_name}' not found.")
             continue
+
         # transform the jobs in batch for batch processing
-        batch, valid_Batch = transform_job_list_for_batch_processing(batch, data)
+        batch, valid_Batch = transform_job_list_for_batch_processing(batch, data, metadata_set)
         if not valid_Batch:
             syslog.syslog(syslog.LOG_ERR, f"Batch '{batch_name}' is invalid.")
             return
@@ -358,6 +389,8 @@ def fetch_interfaces():
         interface_phy_mapping[interface_name] = f"phy{phy_number}"
     
     return interface_phy_mapping
+
+
 
 def get_default_phy(interface_name, interface_phy_mapping):
     # Assuming interface_phy_mapping is a dictionary mapping interface names to phy identifiers
@@ -613,12 +646,15 @@ def execute_batch(batch):
         process_on_layer_2(batch, ssid)
 
 
+
 def debug(message):
     """
     Callback function for the batch processor to emit a line of
     debug.
     """
     print(message, file=sys.stderr)
+
+
 
 def run_batch_processor(batch):
     # form the batch for batch processor
