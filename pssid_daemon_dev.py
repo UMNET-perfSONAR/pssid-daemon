@@ -135,9 +135,6 @@ def schedule_batch(s, batch, data):
 
         s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (s, batch, data, earliest_cron_expression))
 
-
-
-
         #$$
         # scheduled_batches.add(batch_name)
 
@@ -153,6 +150,7 @@ def variable_substitution(object, metadata_set):
                     object[key] = rhs
                 else:
                     substituted = False
+                    print(f"Variable '{lhs}' in '{key}' not found in metadata.")
         elif isinstance(value, list):
             # recursively process lists
             for item in value:
@@ -292,6 +290,11 @@ def process_gui_conf(data, s, metadata_set, hostname, identified_batch_list):
             add_metadata(group["data"].items(), metadata_set, group["name"])
             syslog.syslog(syslog.LOG_INFO, f"Host {hostname} identified in {group_name} group")
 
+    # check if the scehduled batches are empty here $$
+    if not identified_batch_list:
+        syslog.syslog(syslog.LOG_ERR, f"No batch found.")
+        sys.exit
+
     # for each batch name in set validate and schedule
     for batch_name in identified_batch_list:
         # find the batch by name
@@ -308,13 +311,8 @@ def process_gui_conf(data, s, metadata_set, hostname, identified_batch_list):
         
         schedule_batch(s, batch, data)
 
-    # check if the scehduled batches are empty here $$
-    if not identified_batch_list:
-        syslog.syslog(syslog.LOG_ERR, f"No batch found.")
-        sys.exit
-
-    #$$ if check schedule set above, then no need to return s
-    return s, metadata_set
+    #$$ if check schedule set above, then no need to return s  $$ delete s from return
+    # return s, metadata_set
 
 
 
@@ -728,6 +726,8 @@ def main():
 
     # print(s.queue)   lowest priority. 
     s.run()
+
+
 
 if __name__ == "__main__":
     main()
