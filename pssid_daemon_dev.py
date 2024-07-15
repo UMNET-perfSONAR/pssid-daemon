@@ -29,7 +29,7 @@ import time
 import os
 from croniter import croniter
 from jinja2 import Template
-import pscheduler.batchprocessor
+# import pscheduler.batchprocessor
 
 
 # currently not object oriented
@@ -138,7 +138,7 @@ def schedule_batch(s, batch, data):
         #$$
         # scheduled_batches.add(batch_name)
 
-
+# apply variable substitution if the key in metadata_set is a substring of the key in object
 def variable_substitution(object, metadata_set):
     substituted = True
     # iterate through each key-value pair in a dictionary
@@ -148,9 +148,12 @@ def variable_substitution(object, metadata_set):
             for lhs, rhs, origin in metadata_set:
                 if lhs in key:
                     object[key] = rhs
-                else:
-                    substituted = False
-                    print(f"Variable '{lhs}' in '{key}' not found in metadata.")
+                    print(f"Variable '{value}' of '{key}' substituted with '{rhs}' from '{lhs}'")
+            value = object[key]        
+            if '$' in value:
+                substituted = False
+                print(f"Variable '{value}' in '{key}' not found in metadata.")
+            
         elif isinstance(value, list):
             # recursively process lists
             for item in value:
@@ -159,6 +162,9 @@ def variable_substitution(object, metadata_set):
         elif isinstance(value, dict):
             # recursively process dictionaries
             variable_substitution(value, metadata_set)
+
+    
+
     return object, substituted
 
 
@@ -177,7 +183,7 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set):
     if not substituted:
         valid_Batch = False
         syslog.syslog(syslog.LOG_ERR, f"Batch '{batch['name']}' has unresolved variables.")
-        return valid_Batch
+        return batch, valid_Batch
 
     # Iterate through each job in the batch
     for job_name in batch["jobs"]:
@@ -185,7 +191,7 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set):
         if job is None:
             valid_Batch = False
             syslog.syslog(syslog.LOG_ERR, f"Job '{job_name}' not found.")
-            return valid_Batch
+            return batch, valid_Batch
 
         job_label = job['name']
         tests_list = job['tests']
@@ -196,14 +202,14 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set):
             if test is None:
                 valid_Batch = False
                 syslog.syslog(syslog.LOG_ERR, f"Test '{test_name}' not found.")
-                return valid_Batch
+                return batch, valid_Batch
 
             # Perform variable substitution on batch's test 
             test, substituted = variable_substitution(test, metadata_set)
             if not substituted:
                 valid_Batch = False
                 syslog.syslog(syslog.LOG_ERR, f"Test '{test['name']}' has unresolved variables.")
-                return valid_Batch
+                return batch, valid_Batch
   
             job_tests.append(test)
 
@@ -289,6 +295,9 @@ def process_gui_conf(data, s, metadata_set, hostname, identified_batch_list):
             initilize_batch_list(group["batches"], identified_batch_list)
             add_metadata(group["data"].items(), metadata_set, group["name"])
             syslog.syslog(syslog.LOG_INFO, f"Host {hostname} identified in {group_name} group")
+
+    # print metadata set
+    print_metadat_set(metadata_set)
 
     # check if the scehduled batches are empty here $$
     if not identified_batch_list:
@@ -611,7 +620,7 @@ def process_on_layer_3(batch):
     # syslog.syslog(syslog.LOG_INFO, f"Run wget, return code: {wget_process.returncode}")
 
     # run batch processor
-    run_batch_processor(batch)
+    # run_batch_processor(batch)
     #$$ ---
 
     try:
@@ -710,10 +719,12 @@ def main():
 
     # load and process the json configuration file 
     pssid_conf_json = load_json(pssid_config_path)
-    s, metadata_set = process_gui_conf(pssid_conf_json, s, metadata_set, hostname, scheduled_batches)
+    # s, metadata_set = process_gui_conf(pssid_conf_json, s, metadata_set, hostname, scheduled_batches)
+    process_gui_conf(pssid_conf_json, s, metadata_set, hostname, scheduled_batches)
+
 
     # print metadata set
-    print_metadat_set(metadata_set)
+    # print_metadat_set(metadata_set)
 
     # check if the scheudle is empty
     if s is None:
