@@ -29,7 +29,7 @@ import time
 import os
 from croniter import croniter
 from jinja2 import Template
-# import pscheduler.batchprocessor
+import pscheduler.batchprocessor
 
 
 # currently not object oriented
@@ -183,6 +183,7 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set):
     if not substituted:
         valid_Batch = False
         syslog.syslog(syslog.LOG_ERR, f"Batch '{batch['name']}' has unresolved variables.")
+        print(f"Batch '{batch['name']}' has unresolved variables.")
         return batch, valid_Batch
 
     # Iterate through each job in the batch
@@ -191,6 +192,7 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set):
         if job is None:
             valid_Batch = False
             syslog.syslog(syslog.LOG_ERR, f"Job '{job_name}' not found.")
+            print(f"Job '{job_name}' not found.")
             return batch, valid_Batch
 
         job_label = job['name']
@@ -202,6 +204,7 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set):
             if test is None:
                 valid_Batch = False
                 syslog.syslog(syslog.LOG_ERR, f"Test '{test_name}' not found.")
+                print(f"Test '{test_name}' not found.")
                 return batch, valid_Batch
 
             # Perform variable substitution on batch's test 
@@ -209,6 +212,7 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set):
             if not substituted:
                 valid_Batch = False
                 syslog.syslog(syslog.LOG_ERR, f"Test '{test['name']}' has unresolved variables.")
+                print(f"Test '{test['name']}' has unresolved variables.")
                 return batch, valid_Batch
   
             job_tests.append(test)
@@ -620,7 +624,7 @@ def process_on_layer_3(batch):
     # syslog.syslog(syslog.LOG_INFO, f"Run wget, return code: {wget_process.returncode}")
 
     # run batch processor
-    # run_batch_processor(batch)
+    run_batch_processor(batch)
     #$$ ---
 
     try:
