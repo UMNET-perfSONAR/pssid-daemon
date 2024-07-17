@@ -171,7 +171,9 @@ def variable_substitution(object, metadata_set):
 
 
 
+# def transform_job_list_for_batch_processing(batch, data, metadata_set):
 def transform_job_list_for_batch_processing(batch, data, metadata_set):
+
 
     with open('batch_processor_format_template.j2', 'r') as template_file:
         template_str = template_file.read()
@@ -187,6 +189,8 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set):
         syslog.syslog(syslog.LOG_ERR, f"Batch '{batch['name']}' has unresolved variables.")
         print(f"Batch '{batch['name']}' has unresolved variables.")
         return batch, valid_Batch
+    
+    interface = batch["test_interface"]
 
     # Iterate through each job in the batch
     for job_name in batch["jobs"]:
@@ -218,10 +222,11 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set):
                 return batch, valid_Batch
   
             job_tests.append(test)
+        
 
         template = Template(template_str)
         iteration = job_tests.__len__()
-        transformed_data_str = template.render(job_label=job_label, tests=job_tests, iteration=iteration, parallel=parallel)
+        transformed_data_str = template.render(job_label=job_label, tests=job_tests, iteration=iteration, parallel=parallel, interface = interface)
         transformed_data = json.loads(transformed_data_str)
         transformed_job_list.append(transformed_data) 
        
@@ -366,7 +371,7 @@ def netns_delete():
 def interface_in_namespace(interface):
     try:
         # check if interface is in namespace
-        check_interface_command = f"ip netns exec pssid_wlan0 ip link ls"
+        check_interface_command = f"ip netns exec pssid_{interface} ip link ls"
         interface_in_namespace = subprocess.run(check_interface_command, shell=True, capture_output=True, text=True).stdout.find(interface) != -1
         # print("interface_in_namespace: ", interface_in_namespace)
         if not interface_in_namespace:
@@ -411,7 +416,7 @@ def get_default_phy(interface_name, interface_phy_mapping):
 
 
 
-def setup_netns(batch):
+def setup_netns(batch, ssid_profile):
     interface = batch["test_interface"]
     namespace = f"pssid_{interface}"
     check_namespace_command = f"ip netns list | grep {namespace}"
@@ -470,7 +475,7 @@ def setup_netns(batch):
             
         # force teardown l2  # check set to false 
         try:
-            teardown_layer2_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_supplicant_Mwireless.conf -i {interface} -d"
+            teardown_layer2_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_supplicant_{ssid_profile}.conf -i {interface} -d"
             layer2_process = subprocess.run(teardown_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
             # syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
             print('\n>> clear netns layer 2')
@@ -660,7 +665,7 @@ def process_on_layer_3(batch):
 def execute_batch(batch): 
     
     for ssid in batch["ssid_profiles"]:
-        setup_netns(batch)
+        setup_netns(batch, ssid)
         # build process
         process_on_layer_2(batch, ssid)
 
