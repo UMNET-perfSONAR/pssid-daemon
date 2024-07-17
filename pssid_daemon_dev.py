@@ -130,13 +130,15 @@ def schedule_batch(s, batch, data):
     else:
         #print('earliest_next_run_time: ', earliest_next_run_time) 
         syslog.syslog(syslog.LOG_INFO, f"Schedule batch '{batch_name}', earlist next run time: {earliest_next_run_time}, cron expression: {earliest_cron_expression}")
-      
+        # maybe a print here?
         # s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (s, batch, data, earliest_cron_expression, scheduled_batches))
 
         s.enterabs(earliest_next_run_time.timestamp(), batch["priority"], run_batch, (s, batch, data, earliest_cron_expression))
 
         #$$
         # scheduled_batches.add(batch_name)
+
+
 
 # apply variable substitution if the key in metadata_set is a substring of the key in object
 def variable_substitution(object, metadata_set):
@@ -303,7 +305,7 @@ def process_gui_conf(data, s, metadata_set, hostname, identified_batch_list):
     # print metadata set
     print_metadat_set(metadata_set)
 
-    # check if the scehduled batches are empty here $$
+    # check if the identified batche list is empty
     if not identified_batch_list:
         syslog.syslog(syslog.LOG_ERR, f"No batch found.")
         sys.exit
@@ -491,10 +493,16 @@ def setup_netns(batch):
             syslog.syslog(syslog.LOG_ERR, f"Error removing existing resolv.conf in namespace {namespace} : {e}")
 
 
-
 def process_on_layer_2(batch, ssid_profile):
     interface = batch["test_interface"]
     namespace = f"pssid_{interface}"
+
+    wpa_supplicant_conf_file = f"/etc/wpa_supplicant/wpa_supplicant_{ssid_profile}.conf"
+    if not os.path.exists(wpa_supplicant_conf_file):
+        syslog.syslog(syslog.LOG_ERR, f"Error: wpa_supplicant conf file {wpa_supplicant_conf_file} does not exist.")
+        print(f"Error: wpa_supplicant conf file {wpa_supplicant_conf_file} does not exist.")
+        return
+    
     try:
         # call layer 2 tool 
         build_layer2_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_supplicant_{ssid_profile}.conf -i {interface}"
