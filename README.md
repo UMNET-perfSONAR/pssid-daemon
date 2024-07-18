@@ -164,3 +164,9 @@ systemctl restart pssid-daemon.service
 systemctl status pssid-daemon.service
 systemctl enable pssid-daemon.service
 ```
+
+
+# Screenshots
+![alt text](/example/pssid-daemon.png)
+
+![alt text](pssid-log.png)
