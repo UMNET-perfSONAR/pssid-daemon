@@ -1,20 +1,46 @@
 # pssid-daemon
 #### pSSID scheduler/test daemon
 pssid-daemon.py reads pssid-config.json file, generates schedules based on cron expressions in the batch,
-and run batch with batch processor with pscheduler from perfSONAR.
+and run batch with batch processor with pscheduler from perfSONAR. 
+
+Tested Environment:
+Ubuntu Server 22.04.4 LTS (64-bit)
+Raspberry Pi 4 
 
 
 ## File structure
+This shows the comprehensive file structure on a RPi after configuration. Follow instructions to complete configuration.
 ```bash
-.
+. 
 ├── pssid-daemon.py                   
 ├── batch_processor_format_template.j2
+└── README.md
+
+/var/lib/pssid/
+├── pssid_config.json       
+
+/etc/wap_supplicant/
+├── wpa_supplicant_{ssid_profile}.conf
+
+/usr/lib/exec/pssid
+├── pssid-80211
+├── pssid-dhcp
+├── libpssid.sh
+├── LICENSE
 └── README.md
 ```
 
 
+## Install pscheduler
+- User may be prompted to the latest installation script.
+```bash
+curl -s https://raw.githubusercontent.com/perfsonar/project/master/install-perfsonar \
+  | sh -s - --auto-updates --tunings testpoint
+```
+
+
 ## Setup syslog configuration
-User need to define the customizable log facility. By default, pssid-daemon.py will syslog to /var/log/pssid.log using facility Local0. The setup is as follows.
+User can define a customizable log facility, see Usage. By default, pssid-daemon.py uses Local0 and write to pssid.log under /var/log.
 
 - Open the rsyslog.conf file.
 ```bash
@@ -32,7 +58,7 @@ systemctl restart rsyslog
 ```
 
 
-## Setup Layer 2 & Layer 3 tools
+## Tools for network configuration (Layer 2 & Layer 3 tools)
 #### Important 
 The following steps are for manual setup. Our ansible script will automate this process.
 <link to ansible repo>
@@ -71,33 +97,42 @@ pip install croniter
 ```
 
 
-## Usage/Examples
-Clone this branch
+## Usage
+- Clone this repo
 ```bash
 git clone --branch lu-implement-passid-daemon https://github.com/UMNET-perfSONAR/pssid-daemon.git
 ```
 
-
-By default, pssid-daemon.py and pssid_config.json are in the same folder.
-Run this program in root.
-
-"198.111.226.184" is the only host defined in the pssid_config.json, run specifically with the hsot name.
-
-Modify pssid_config.json, update "ssid_profiles" according to your test environment.
-
-```javascript
-python3 pssid-daemon.py --hostname "198.111.226.184"
+- How to run pssid-daemon.py with pssid_config.json file in this repo
+```bash
+python3 pssid_daemon_dev.py --hostname "198.111.226.184" --config ./pssid_config.json
 ```
 
---config flag can specify the path for the config file
-```javascript
-python3 pssid-daemon.py --config "./pssid_config.json" --hostname "198.111.226.184"
+#### Cli arguments examples
+- Default mode, assuming hostname is in pssid_config.json file at the default location. Syslog is configured using LOCAL0.
+```bash
+python3 pssid_daemon_dev.py
 ```
 
-## Debug
-If namespace pssid was created previously, remember to delete the namespace and reboot to resolve related errors.
+- How to specify syslog facility.
+```bash
+python3 pssid_daemon_dev.py --hostname "198.111.226.184" --facility local1
+```
 
+- How to specify the path of pssid_config.json file.
+```bash
+python3 pssid_daemon_dev.py --hostname "198.111.226.184" --config ./pssid_config.json
+```
 
+- How to validate the pssid_config.json file before run any batch.
+```bash
+python3 pssid_daemon_dev.py --hostname "198.111.226.184" --config ./pssid_config.json --validate
+```
+
+- How to enable batch processor debug message.
+```bash
+python3 pssid_daemon_dev.py --hostname "198.111.226.184" --config ./pssid_config.json --debug
+```
 
 
 ## How to deamonlize
