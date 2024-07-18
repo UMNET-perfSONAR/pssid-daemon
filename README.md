@@ -169,4 +169,4 @@ systemctl enable pssid-daemon.service
 # Screenshots
 ![alt text](/example/pssid-daemon.png)
 
-![alt text](pssid-log.png)
+![alt text](/example/pssid-log.png)
