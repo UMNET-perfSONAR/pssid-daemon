@@ -49,7 +49,7 @@ vi /etc/rsyslog.conf
 
 - Add the following line at the end:
 ```bash
-local0.*    /var/log/pssid.log
+local0.* /var/log/pssid.log
 ```
 
 - Restart syslog service
