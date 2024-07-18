@@ -108,7 +108,7 @@ git clone --branch lu-implement-passid-daemon https://github.com/UMNET-perfSONAR
 python3 pssid_daemon_dev.py --hostname "198.111.226.184" --config ./pssid_config.json
 ```
 
-#### Cli arguments examples
+#### Other examples
 - Default mode, assuming hostname is in pssid_config.json file at the default location. Syslog is configured using LOCAL0.
 ```bash
 python3 pssid_daemon_dev.py
