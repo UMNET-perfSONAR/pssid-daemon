@@ -297,6 +297,7 @@ def process_gui_conf(data, s, metadata_set, hostname, identified_batch_list):
     # syslog warning if no match
     if host_match == None: 
         syslog.syslog(syslog.LOG_ERR, f"No host with name '{hostname}' found.")
+        print(f"No host with name '{hostname}' found.")
         sys.exit(1)       
     
     # check host groups for further matches
@@ -476,6 +477,8 @@ def setup_netns(batch, ssid_profile):
         # force teardown l2  # check set to false 
         try:
             teardown_layer2_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_supplicant_{ssid_profile}.conf -i {interface} -d"
+            # print(50 * '-')
+            # print(teardown_layer2_tool_command)
             layer2_process = subprocess.run(teardown_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
             # syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
             print('\n>> clear netns layer 2')
@@ -484,15 +487,13 @@ def setup_netns(batch, ssid_profile):
             syslog.syslog(syslog.LOG_ERR, f"Error init netns due to failure of tearing down layer 2")
             return
     
-
-    
     # remove existing resolv.conf in namespace
     if os.path.exists(f"/etc/netns/{namespace}/resolv.conf"):
         try:
             rm_existing_resolv_conf_command = f"rm /etc/netns/{namespace}/resolv.conf" # possible remaining resolv.conf after interupted pssid-daemon, the file might be the one copied from /tmp/resolv.conf to /etc/resolv.conf in previous run 
             subprocess.run(rm_existing_resolv_conf_command, shell=True, check=False) # ignore error if file not found
             syslog.syslog(syslog.LOG_INFO, f"Remove existing resolv.conf in namespace {namespace}")
-            print(f'>> Remove existing resolv.conf in namespace {namespace}\n')
+            print(f'\n>> Remove existing resolv.conf in namespace {namespace}')
         except subprocess.CalledProcessError as e:
             print(f"Error removing existing resolv.conf in namespace {namespace}")
             syslog.syslog(syslog.LOG_ERR, f"Error removing existing resolv.conf in namespace {namespace} : {e}")
@@ -501,7 +502,7 @@ def setup_netns(batch, ssid_profile):
 def process_on_layer_2(batch, ssid_profile):
     interface = batch["test_interface"]
     namespace = f"pssid_{interface}"
-
+    
     wpa_supplicant_conf_file = f"/etc/wpa_supplicant/wpa_supplicant_{ssid_profile}.conf"
     if not os.path.exists(wpa_supplicant_conf_file):
         syslog.syslog(syslog.LOG_ERR, f"Error: wpa_supplicant conf file {wpa_supplicant_conf_file} does not exist.")
@@ -511,7 +512,8 @@ def process_on_layer_2(batch, ssid_profile):
     try:
         # call layer 2 tool 
         build_layer2_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_supplicant_{ssid_profile}.conf -i {interface}"
-        # print("debug: ",build_layer2_tool_command)
+        # print(50 * '-')
+        # print(build_layer2_tool_command)
         layer2_process = subprocess.run(build_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
         syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
         print('\n>> built layer 2')
@@ -531,7 +533,7 @@ def process_on_layer_2(batch, ssid_profile):
         print('\n>> tore down layer 2')
 
     except subprocess.CalledProcessError as e:
-        print(f"Error building layer 2")
+        print(f"Error tearing down layer 2")
         syslog.syslog(syslog.LOG_ERR, f"Error tearing down layer 2")
 
     print('\n>> continue ...\n')
@@ -637,6 +639,7 @@ def process_on_layer_3(batch):
     # syslog.syslog(syslog.LOG_INFO, f"Run wget, return code: {wget_process.returncode}")
 
     # run batch processor
+    print('\n>> run batch processor ...')
     run_batch_processor(batch)
     #$$ ---
 
@@ -688,7 +691,12 @@ def run_batch_processor(batch):
     }
 
     processor = pscheduler.batchprocessor.BatchProcessor(batch_4_batchProcessor)
-    result = processor(debug=debug)
+    if debug:
+        print('')
+        result = processor(debug=debug)
+    else:
+        result = processor()
+
 
 
 
@@ -713,7 +721,8 @@ def main():
     # evaluate cli arguments
     args = parser.parse_args()
 
-    # if args.debug
+    if args.debug:
+        debug = True
     # either implement here, or put the in the class Daemon's constructor  
          
     if args.hostname:
