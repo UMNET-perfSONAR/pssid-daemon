@@ -2,7 +2,7 @@
     "hosts": [
       {
         "name": "198.111.226.184",
-        "batches": [],
+        "batches": ["batch_http_google"],
         "data": {          
             "interface": "host_interface",
             "facility": "host_facility"}
