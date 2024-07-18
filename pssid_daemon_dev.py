@@ -38,12 +38,13 @@ import pscheduler.batchprocessor
 #         pass
 
 # load the json file
-def load_json(filename):
+def load_json(file_path):
     try:
-        with open(filename, 'r', encoding="utf-8") as f:
+        with open(file_path, 'r', encoding="utf-8") as f:
             return json.load(f)
     except FileNotFoundError as e:
-        syslog.syslog(syslog.LOG_ERR, f"Error loading JSON from {filename}: {e}")
+        print(f"{e}")
+        syslog.syslog(syslog.LOG_ERR, f"{e}")
         sys.exit(1)      
 
 
@@ -172,7 +173,7 @@ def variable_substitution(object, metadata_set):
 
 
 # def transform_job_list_for_batch_processing(batch, data, metadata_set):
-def transform_job_list_for_batch_processing(batch, data, metadata_set):
+def transform_job_list_for_batch_processing(batch, data, metadata_set, syslog_facility):
 
 
     with open('batch_processor_format_template.j2', 'r') as template_file:
@@ -226,7 +227,7 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set):
 
         template = Template(template_str)
         iteration = job_tests.__len__()
-        transformed_data_str = template.render(job_label=job_label, tests=job_tests, iteration=iteration, parallel=parallel, interface = interface)
+        transformed_data_str = template.render(job_label=job_label, tests=job_tests, iteration=iteration, parallel=parallel, interface = interface, facility = syslog_facility)
         transformed_data = json.loads(transformed_data_str)
         transformed_job_list.append(transformed_data) 
        
@@ -285,7 +286,7 @@ def add_metadata(metadata_list, metadata_set, origin):
 
 
 
-def process_gui_conf(data, s, metadata_set, hostname, identified_batch_list):
+def process_gui_conf(data, s, metadata_set, hostname, identified_batch_list, syslog_facility):
     host_match = None
     for host in data["hosts"]:
         if host["name"] == hostname:
@@ -325,7 +326,7 @@ def process_gui_conf(data, s, metadata_set, hostname, identified_batch_list):
             continue
 
         # transform the jobs in batch for batch processing
-        batch, valid_Batch = transform_job_list_for_batch_processing(batch, data, metadata_set)
+        batch, valid_Batch = transform_job_list_for_batch_processing(batch, data, metadata_set, syslog_facility)
         if not valid_Batch:
             syslog.syslog(syslog.LOG_ERR, f"Batch '{batch_name}' is invalid.")
             return
@@ -707,7 +708,7 @@ def main():
         description='Pssid daemon commanline arguments: debug mode, hostname, and config file.'
     )
     parser.add_argument('--debug', action='store_true',
-        help='Enable debug mode.'
+        help='Enable debug mode on cli batch processor process.'
     )
     parser.add_argument('--hostname', type=str,
         help='Specify the hostname.'
@@ -715,7 +716,10 @@ def main():
     parser.add_argument('--config', type=str,
         help='Specify the path to the config file.'
     )
-    parser.add_argument('--validateConfig', type=str,
+    parser.add_argument('--facility', type=str,
+        help='Specify the syslog facility.'
+    )
+    parser.add_argument('--validate', action='store_true',
         help='Validate the config file processing.'
     )
     # evaluate cli arguments
@@ -731,9 +735,20 @@ def main():
         hostname = get_hostname()
     
     if args.config:
-        pssid_config_path = args.config
+        pssid_config_path = args.config     # "./pssid_config.json"
     else:
-        pssid_config_path = "./pssid_config.json"  # replace the default path for pssid config file  --> /var/lib/pssid/pssid_config.json
+        pssid_config_path = "/var/lib/pssid/pssid_config.json"      # default path
+
+    if args.facility:
+        syslog_facility = args.facility
+    else:
+        # batch processor archive log facility
+        syslog_facility = "local0"
+        # syslog_facility = syslog.LOG_LOCAL0
+
+    # generate the syslog facility constant
+    constant_name = "LOG_" + syslog_facility.upper()
+    facility_for_openlog = getattr(syslog, constant_name)   
 
     # initialization of scheduler and metadata set
     metadata_set = set()
@@ -741,12 +756,17 @@ def main():
     scheduled_batches = set()
 
     # open syslog with ident 'pssid' and facility LOG_LOCAL0
-    syslog.openlog(ident='pssid', facility=syslog.LOG_LOCAL0) 
+    syslog.openlog(ident='pssid', facility=facility_for_openlog) 
 
-    # load and process the json configuration file 
+
+    # load and process the json configuration file
     pssid_conf_json = load_json(pssid_config_path)
+
+
+
+
     # s, metadata_set = process_gui_conf(pssid_conf_json, s, metadata_set, hostname, scheduled_batches)
-    process_gui_conf(pssid_conf_json, s, metadata_set, hostname, scheduled_batches)
+    process_gui_conf(pssid_conf_json, s, metadata_set, hostname, scheduled_batches, syslog_facility)
 
 
     # print metadata set
@@ -758,7 +778,9 @@ def main():
         sys.exit(1)
 
     # validate the config file processing
-    if args.validateConfig:
+    if args.validate:
+        print("The config file is validated.")
+        syslog.syslog(syslog.LOG_INFO, f"The config file is validated.")
         sys.exit(0)
 
     # print(s.queue)   lowest priority. 
