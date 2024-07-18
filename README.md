@@ -100,7 +100,7 @@ pip install croniter
 ## Usage
 - Clone this repo
 ```bash
-git clone --branch lu-implement-passid-daemon https://github.com/UMNET-perfSONAR/pssid-daemon.git
+git clone https://github.com/UMNET-perfSONAR/pssid-daemon.git
 ```
 
 - How to run pssid-daemon.py with pssid_config.json file in this repo
