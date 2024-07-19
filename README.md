@@ -30,6 +30,12 @@ This shows the comprehensive file structure on a RPi after configuration. Follow
 └── README.md
 ```
 
+## Note 
+Manually setup the environment as follows. Or, use our ansible scripts will automate this process.
+```bash
+https://github.com/UMNET-perfSONAR/ansible-playbook-pssid-daemon.git
+```
+
 
 ## Install pscheduler
 - User may be prompted to the latest installation script.
@@ -59,10 +65,6 @@ systemctl restart rsyslog
 
 
 ## Tools for network configuration (Layer 2 & Layer 3 tools)
-#### Important 
-The following steps are for manual setup. Our ansible script will automate this process.
-<link to ansible repo>
-
 - Clone VT-collab tools. Copy the files inside VT-collab folder to  </usr/lib/exec/pssid/>
 ```bash
 git clone --branch waldrep https://github.com/UMNET-perfSONAR/VT-collab.git
