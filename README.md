@@ -98,12 +98,18 @@ pip install croniter
 
 
 ## Usage
-- Clone this repo
+#### Im
+- Clone this repo.
 ```bash
 git clone https://github.com/UMNET-perfSONAR/pssid-daemon.git
 ```
 
-- How to run pssid-daemon.py with pssid_config.json file in this repo
+- Get root access.  
+```bash
+su
+```
+
+- How to run pssid-daemon.py with pssid_config.json file in this repo. Run in root. 
 ```bash
 python3 pssid_daemon_dev.py --hostname "198.111.226.184" --config ./pssid_config.json
 ```
