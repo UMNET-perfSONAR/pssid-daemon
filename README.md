@@ -139,6 +139,11 @@ python3 pssid_daemon_dev.py --hostname "198.111.226.184" --config ./pssid_config
 python3 pssid_daemon_dev.py --hostname "198.111.226.184" --config ./pssid_config.json --debug
 ```
 
+- How to check syslog information
+```bash
+tail -f /var/log/pssid.log
+```
+
 
 ## How to deamonlize
 - Probes running pssid-daemon program may be interrupted by provisioning. Daemonizing the program is thus necessary.
@@ -173,5 +178,3 @@ systemctl enable pssid-daemon.service
 
 # Screenshots
 ![alt text](/example/pssid-daemon.png)
-
-![alt text](/example/pssid-log.png)
