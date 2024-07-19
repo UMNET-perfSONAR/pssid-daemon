@@ -141,7 +141,7 @@ python3 pssid_daemon_dev.py --hostname "198.111.226.184" --config ./pssid_config
 python3 pssid_daemon_dev.py --hostname "198.111.226.184" --config ./pssid_config.json --debug
 ```
 
-- How to check syslog information
+- How to check syslog information.
 ```bash
 tail -f /var/log/pssid.log
 ```
@@ -169,7 +169,7 @@ ExecStart=/usr/bin/python3 pssid-daemon.py --hostname "198.111.226.184"
 WantedBy=multi-user.target
 ```
 
-Then, restart daemon service, check status, and complete daemonization
+Then, restart daemon service, check status, and enable the service.
 ```bash
 systemctl daemon-reload
 systemctl restart pssid-daemon.service
