@@ -1,18 +1,12 @@
-# first activate the virtual environment
-# python3 pssid_daemon_dev.py --hostname "198.111.226.184"
-
-# in the target node
-# -- apt install pip3
-# -- pip install croniter 
-
-# ip netns exec pssid_wlan0 /usr/lib/exec/pssid/pssid-80211 -c '/etc/wpa_supplicant/wpa_supplicant_Mwireless.conf' -i wlan0 -d
-# ip netns exec pssid_wlan0 /usr/lib/exec/pssid/pssid-dhcp -i wlan0 -d
-
-# ip netns pids pssid_wlan0 | xargs kill
-# cat /etc/netns/pssid_wlan0/resolv.conf
-# tail -f /var/log/pssid.log
-
-# cat /etc/resolv.conf
+# Introduction:
+# This program runs on Raspberry Pi 4 with Ubuntu 22.04.4 TLS and is responsible for scheduling and executing 
+# the tests defined in the configuration file. The program reads the configuration file, identifies the host, 
+# and schedules the batches for execution. The program uses the croniter library to schedule the batches based 
+# on the cron expression defined in the configuration file. The program uses the pscheduler batch processor to
+# execute the tests.
+#
+# Programmed by: Dianlu He
+# Date: 07/19/2024
 
 import json
 import socket
