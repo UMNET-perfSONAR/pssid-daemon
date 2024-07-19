@@ -64,8 +64,8 @@ systemctl restart rsyslog
 ```
 
 
-## Tools for network configuration (Layer 2 & Layer 3 tools)
-- Clone VT-collab tools. Copy the files inside VT-collab folder to  </usr/lib/exec/pssid/>
+## Tools for network configuration
+- Clone VT-collab tools. Copy the files inside VT-collab folder to  usr/lib/exec/pssid/
 ```bash
 git clone --branch waldrep https://github.com/UMNET-perfSONAR/VT-collab.git
 ```
@@ -87,7 +87,7 @@ apt install jq dhcpcd5
 systemctl --now disable dhcpcd.service
 ```
 
-- Put wpa_supplicant configuration file to </etc/wpa_supplicant/>. Name the file as wpa_supplicant_{ssid}.conf.
+- Put wpa_supplicant configuration file to etc/wpa_supplicant/. Name the file as wpa_supplicant_{ssid}.conf.
 Make sure the ssid is consistent with your Wi-Fi testing evironment. 
 
 
