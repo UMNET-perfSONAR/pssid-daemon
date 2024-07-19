@@ -4,7 +4,7 @@
         "name": "198.111.226.184",
         "batches": ["batch_http_google"],
         "data": {          
-            "interface": "host_interface",
+            "interface": "wlan0",
             "facility": "host_facility"}
       },
       {
@@ -106,7 +106,7 @@
       {
         "name": "batch_http_google",
         "priority": 1,
-        "test_interface": "wlan0",
+        "test_interface": "$interface",
         "ssid_profiles": [
           "Mwireless"
         ],
