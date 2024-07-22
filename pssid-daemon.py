@@ -113,7 +113,7 @@ def variable_substitution(object, metadata_set):
     substituted = True
     # iterate through each key-value pair in a dictionary
     for key, value in object.items():
-        if isinstance(value, str) and '$' in value:
+        if isinstance(value, str) and '$' in value and 'name' not in key.lower():
             # check if the value is a string and needs substitution
             for lhs, rhs, origin in metadata_set:
                 if lhs in key:
