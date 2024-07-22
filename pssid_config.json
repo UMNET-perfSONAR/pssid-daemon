@@ -1,0 +1,126 @@
+{
+    "hosts": [
+      {
+        "name": "198.111.226.184",
+        "batches": ["batch_http_google"],
+        "data": {          
+            "interface": "wlan0",
+            "facility": "host_facility"}
+      },
+      {
+        "name": "198.111.226.182",
+        "batches": [],
+        "data": {}
+      },
+      {
+        "name": "198.111.226.190",
+        "batches": [],
+        "data": {}
+      },
+      {
+        "name": "198.111.226.179",
+        "batches": [],
+        "data": {}
+      }
+    ],
+    "host_groups": [
+      {
+        "name": "match1",
+        "batches": [],
+        "hosts": [
+          "198.111.226.179"
+        ],
+        "hosts_regex": [],
+        "data": {}
+      },
+      {
+        "name": "match_2",
+        "batches": [
+          "batch_http_google"
+        ],
+        "hosts": [
+          "198.111.226.182"
+        ],
+        "hosts_regex": [
+          ".*184"
+        ],
+        "data": {
+          "facility": "group_facility",
+          "color": "group_color"
+        }
+      }
+    ],
+    "archivers": [
+      {
+        "name": "syslog",
+        "archiver": "syslog",
+        "data": {
+          "identity": "pssid",
+          "facility": "1"
+        }
+      }
+    ],
+    "schedules": [
+      {
+        "name": "once_a_minute",
+        "repeat": "* * * * *"
+      },
+      {
+        "name": "every_two_minutes",
+        "repeat": "*/2 * * * *"
+      },
+      {
+        "name": "every_three_minute",
+        "repeat": "*/3 * * * *"
+      }
+    ],
+    "ssid_profiles": [
+      {
+        "name": "Mwireless",
+        "ssid": "Mwireless",
+        "test_level": "SSID",
+        "bssid_scan": "Disabled",
+        "min_signal": -79
+      }
+    ],
+    "tests": [
+      {
+        "name": "http_google",
+        "type": "http",
+        "spec": {
+          "url": "www.google.com"
+        }
+      }
+    ],
+    "jobs": [
+      {
+        "name": "job_http_google",
+        "parallel": "True",
+        "tests": [
+          "http_google"
+        ],
+        "continue-if": "true"
+      }
+    ],
+    "batches": [
+      {
+        "name": "batch_http_google",
+        "priority": 1,
+        "test_interface": "$interface",
+        "ssid_profiles": [
+          "Mwireless"
+        ],
+        "schedules": [
+          
+          "every_two_minutes",
+          "every_three_minute"
+        ],
+        "jobs": [
+          "job_http_google"
+        ],
+        "archivers": [
+          "syslog"
+        ]
+      }
+    ]
+  }
