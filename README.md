@@ -31,7 +31,7 @@ This shows the comprehensive file structure on a RPi after configuration. Follow
 ```
 
 ## Note 
-Manually setup the environment as follows. Or, use our ansible scripts will automate this process.
+Manually setup the environment as follows. Or, use our ansible scripts to automate this process.
 ```bash
 https://github.com/UMNET-perfSONAR/ansible-playbook-pssid-daemon.git
 ```
