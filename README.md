@@ -11,7 +11,7 @@ Raspberry Pi 4
 ## File structure
 This shows the comprehensive file structure on a RPi after configuration. Follow instructions to complete configuration.
 ```bash
-. 
+/usr/bin/pssid/
 ├── pssid-daemon.py                   
 ├── batch_processor_format_template.j2
 └── README.md
@@ -19,10 +19,10 @@ This shows the comprehensive file structure on a RPi after configuration. Follow
 /var/lib/pssid/
 ├── pssid_config.json       
 
-/etc/wap_supplicant/
+/etc/wpa_supplicant/
 ├── wpa_supplicant_{ssid_profile}.conf
 
-/usr/lib/exec/pssid
+/usr/lib/exec/pssid/
 ├── pssid-80211
 ├── pssid-dhcp
 ├── libpssid.sh
@@ -147,7 +147,7 @@ tail -f /var/log/pssid.log
 ```
 
 
-## How to deamonlize
+## How to daemonlize
 - Probes running pssid-daemon program may be interrupted by provisioning. Daemonizing the program is thus necessary.
 First, create a systemd service file, called pssid-daemon.service.
 ```bash
@@ -155,15 +155,15 @@ cd /etc/systemd/system
 vi pssid-daemon.service
 ```
 
-- Add the following contents to the file. Make sure hostname is the GUI configuration file, otherwise, please specify using hostname argument.
+- Add the following contents to the file. Make sure hostname is the GUI configuration file, otherwise, please specify using --hostname argument.
 ```bash
 [Unit]
 Description=”Pssid-Daemon”
 
 [Service]
 Restart=always
-WorkingDirectory=/home/dianluhe/pssid-daemon
-ExecStart=/usr/bin/python3 pssid-daemon.py --hostname "198.111.226.184"
+WorkingDirectory=/usr/bin/pssid/
+ExecStart=/usr/bin/python3 pssid-daemon.py
 
 [Install]
 WantedBy=multi-user.target
