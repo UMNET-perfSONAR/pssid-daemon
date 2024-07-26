@@ -88,16 +88,24 @@
         "name": "http_google",
         "type": "http",
         "spec": {
-          "url": "www.google.com"
+          "url": ""
+        }
+      },
+      {
+        "name": "http_ebay",
+        "type": "http",
+        "spec": {
+          "url": "www.ebay.com"
         }
       }
     ],
     "jobs": [
       {
-        "name": "job_http_google",
+        "name": "job_http",
         "parallel": "True",
         "tests": [
-          "http_google"
+          "http_google",
+          "http_ebay"
         ],
         "continue-if": "true"
       }
@@ -116,7 +124,7 @@
           "every_three_minute"
         ],
         "jobs": [
-          "job_http_google"
+          "job_http"
         ],
         "archivers": [
           "syslog"

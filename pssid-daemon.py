@@ -167,6 +167,7 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set, syslog_fa
         job_label = job['name']
         tests_list = job['tests']
         parallel = job['parallel']
+        continue_if = job['continue-if'].lower()  # continue-if is a boolean string, convert to lower case. Batch processor accepts a string of 'true' or 'false' or other format in man page
 
         for test_name in tests_list:
             test = next((t for t in data['tests'] if t['name'] == test_name), None)
@@ -188,10 +189,10 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set, syslog_fa
         
         template = Template(template_str)
         iteration = job_tests.__len__()
-        transformed_data_str = template.render(job_label=job_label, tests=job_tests, iteration=iteration, parallel=parallel, interface = interface, facility = syslog_facility)
+        transformed_data_str = template.render(job_label=job_label, tests=job_tests, iteration=iteration, parallel=parallel, interface = interface, facility = syslog_facility, continue_if = continue_if)
         transformed_data = json.loads(transformed_data_str)
         transformed_job_list.append(transformed_data) 
-       
+    
     # iterate through transformed_data in batch to update boolean literals to conform python object type (later formed batch_4_batchProcessor can be directly dump to pscheduler)
     for job in transformed_job_list:
         if "parallel" in job:
