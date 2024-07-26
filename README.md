@@ -112,33 +112,33 @@ su
 
 - How to run pssid-daemon.py with pssid_config.json file in this repo. Run in root. 
 ```bash
-python3 pssid_daemon_dev.py --hostname "198.111.226.184" --config ./pssid_config.json
+python3 pssid-daemon.py --hostname "198.111.226.184" --config ./pssid_config.json
 ```
 
 #### Other examples
 - Default mode, assuming hostname is in pssid_config.json file at the default location. Syslog is configured using LOCAL0.
 ```bash
-python3 pssid_daemon_dev.py
+python3  pssid-daemon.py
 ```
 
 - How to specify syslog facility.
 ```bash
-python3 pssid_daemon_dev.py --hostname "198.111.226.184" --facility local1
+python3  pssid-daemon.py --hostname "198.111.226.184" --facility local1
 ```
 
 - How to specify the path of pssid_config.json file.
 ```bash
-python3 pssid_daemon_dev.py --hostname "198.111.226.184" --config ./pssid_config.json
+python3  pssid-daemon.py --hostname "198.111.226.184" --config ./pssid_config.json
 ```
 
 - How to validate the pssid_config.json file before run any batch.
 ```bash
-python3 pssid_daemon_dev.py --hostname "198.111.226.184" --config ./pssid_config.json --validate
+python3  pssid-daemon.py --hostname "198.111.226.184" --config ./pssid_config.json --validate
 ```
 
 - How to enable batch processor debug message.
 ```bash
-python3 pssid_daemon_dev.py --hostname "198.111.226.184" --config ./pssid_config.json --debug
+python3  pssid-daemon.py --hostname "198.111.226.184" --config ./pssid_config.json --debug
 ```
 
 - How to check syslog information.
