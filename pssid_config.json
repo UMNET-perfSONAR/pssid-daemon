@@ -85,6 +85,13 @@
     ],
     "tests": [
       {
+        "name": "throughput_arbl",
+        "type": "throughput",
+        "spec": {
+          "dest": "perfsonar-bin-arbl.umnet.umich.edu"
+        }
+      },
+      {
         "name": "http_google",
         "type": "http",
         "spec": {
@@ -104,10 +111,11 @@
         "name": "job_http",
         "parallel": "True",
         "tests": [
+          "throughput_arbl",
           "http_google",
           "http_ebay"
         ],
-        "continue-if": "true"
+        "continue-if": "false"
       }
     ],
     "batches": [
