@@ -361,7 +361,7 @@ def setup_netns(batch, ssid_profile):
             # bond interface with namespace pssid 
             bond_interface_namespace_command = f"iw {phy_name} set netns name {namespace}"
             subprocess.run(bond_interface_namespace_command, shell=True, check=True)
-            print(f'>> bond {interface} to {namespace}\n')
+            print(f'\n>> bond {interface} to {namespace}')
             syslog.syslog(syslog.LOG_INFO, f"Add interface {interface} to namespace {namespace}")
             
         except subprocess.CalledProcessError as e:

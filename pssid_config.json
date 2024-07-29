@@ -2,7 +2,7 @@
     "hosts": [
       {
         "name": "198.111.226.184",
-        "batches": ["batch_http_google"],
+        "batches": ["batch_A"],
         "data": {          
             "interface": "wlan0",
             "facility": "host_facility"}
@@ -85,6 +85,13 @@
     ],
     "tests": [
       {
+        "name": "throughput_arbl",
+        "type": "throughput",
+        "spec": {
+          "dest": "perfsonar-bin-arbl.umnet.umich.edu"
+        }
+      },
+      {
         "name": "http_google",
         "type": "http",
         "spec": {
@@ -101,18 +108,19 @@
     ],
     "jobs": [
       {
-        "name": "job_http",
+        "name": "job_A",
         "parallel": "True",
         "tests": [
+          "throughput_arbl",
           "http_google",
           "http_ebay"
         ],
-        "continue-if": "true"
+        "continue-if": "false"
       }
     ],
     "batches": [
       {
-        "name": "batch_http_google",
+        "name": "batch_A",
         "priority": 1,
         "test_interface": "$interface",
         "ssid_profiles": [
@@ -124,7 +132,7 @@
           "every_three_minute"
         ],
         "jobs": [
-          "job_http"
+          "job_A"
         ],
         "archivers": [
           "syslog"
