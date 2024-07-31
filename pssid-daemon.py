@@ -630,7 +630,7 @@ def main():
     if args.config:
         pssid_config_path = args.config     # "./pssid_config.json"
     else:
-        pssid_config_path = "/var/lib/pssid/pssid_config.json"      # default path
+        pssid_config_path = "/etc/pssid/pssid_config.json"      # default path
 
     if args.facility:
         syslog_facility = args.facility
