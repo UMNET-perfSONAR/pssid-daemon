@@ -124,7 +124,7 @@
         "priority": 1,
         "test_interface": "$interface",
         "ssid_profiles": [
-          "Mwireless"
+          "MWireless"
         ],
         "schedules": [
           
