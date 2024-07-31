@@ -76,8 +76,8 @@
     ],
     "ssid_profiles": [
       {
-        "name": "Mwireless",
-        "ssid": "Mwireless",
+        "name": "MWireless",
+        "ssid": "MWireless",
         "test_level": "SSID",
         "bssid_scan": "Disabled",
         "min_signal": -79
@@ -124,7 +124,7 @@
         "priority": 1,
         "test_interface": "$interface",
         "ssid_profiles": [
-          "Mwireless"
+          "MWireless"
         ],
         "schedules": [
           
