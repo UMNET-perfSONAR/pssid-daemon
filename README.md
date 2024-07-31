@@ -16,7 +16,7 @@ This shows the comprehensive file structure on a RPi after configuration. Follow
 ├── batch_processor_format_template.j2
 └── README.md
 
-/var/lib/pssid/
+/etc/pssid/
 ├── pssid_config.json       
 
 /etc/wpa_supplicant/
