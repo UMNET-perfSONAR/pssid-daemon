@@ -5,7 +5,6 @@
 # on the cron expression defined in the configuration file. The program uses the pscheduler batch processor to
 # execute the tests.
 #
-# Programmed by: Dianlu He
 # Date: 07/19/2024
 
 import json
