@@ -10,7 +10,7 @@
 import json
 import socket
 import re
-import queue
+#import queue
 import time
 import subprocess
 import syslog
@@ -108,6 +108,35 @@ def schedule_batch(s, batch, data):
 
 
 # apply variable substitution if the key in metadata_set is a substring of the key in object
+# def variable_substitution(object, metadata_set):
+#     substituted = True
+#     # iterate through each key-value pair in a dictionary
+#     for key, value in object.items():
+#         if isinstance(value, str) and '$' in value and 'name' not in key.lower():
+#             # check if the value is a string and needs substitution
+#             for lhs, rhs, origin in metadata_set:
+#                 if lhs in key:
+#                     object[key] = rhs
+#                     print(f"Variable '{value}' of '{key}' substituted with '{rhs}' from '{lhs}'")
+#             value = object[key]        
+#             if '$' in value:
+#                 substituted = False
+#                 print(f"Variable '{value}' in '{key}' not found in metadata.")
+            
+#         elif isinstance(value, list):
+#             # recursively process lists
+#             for item in value:
+#                 if isinstance(item, dict):
+#                     variable_substitution(item, metadata_set)
+#         elif isinstance(value, dict):
+#             # recursively process dictionaries
+#             variable_substitution(value, metadata_set)
+
+#     return object, substituted
+
+
+# copy
+# apply variable substitution if the key in metadata_set is a substring of the key in object
 def variable_substitution(object, metadata_set):
     substituted = True
     # iterate through each key-value pair in a dictionary
@@ -115,7 +144,7 @@ def variable_substitution(object, metadata_set):
         if isinstance(value, str) and '$' in value and 'name' not in key.lower():
             # check if the value is a string and needs substitution
             for lhs, rhs, origin in metadata_set:
-                if lhs in key:
+                if lhs in value:
                     object[key] = rhs
                     print(f"Variable '{value}' of '{key}' substituted with '{rhs}' from '{lhs}'")
             value = object[key]        
@@ -133,7 +162,6 @@ def variable_substitution(object, metadata_set):
             variable_substitution(value, metadata_set)
 
     return object, substituted
-
 
 
 def transform_job_list_for_batch_processing(batch, data, metadata_set, syslog_facility):
