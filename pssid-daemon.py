@@ -615,7 +615,7 @@ def run_batch_processor(batch):
 
     processor = pscheduler.batchprocessor.BatchProcessor(batch_4_batchProcessor)
     if debug:
-        print('')
+        print('debug mode')
         result = processor(debug=debug)
     else:
         result = processor()
