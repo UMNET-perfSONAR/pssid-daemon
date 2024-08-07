@@ -13,7 +13,13 @@
                         "type" : "{{ test.type }}",
                         "spec" : {
                             {% for key, value in test.spec.items() %}
-                                "{{ key }}": "{{ value }}"{% if not loop.last %},{% endif %}
+                                "{{ key }}": 
+                                {% if value is string %}
+                                    "{{ value }}"
+                                {% else %}
+                                    {{ value }}
+                                {% endif %}
+                                {% if not loop.last %},{% endif %}
                             {% endfor %}
                         }
                     },
