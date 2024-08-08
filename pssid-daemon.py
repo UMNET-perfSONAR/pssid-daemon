@@ -10,7 +10,6 @@
 import json
 import socket
 import re
-#import queue
 import time
 import subprocess
 import syslog
