@@ -267,7 +267,8 @@ def process_gui_conf(data, s, metadata_set, hostname, identified_batch_list, sys
     # check host groups for further matches
     for group in data["host_groups"]:
         group_name = group["name"]
-        if host in group["hosts"] or find_matching_regex(group["hosts_regex"], host_match):
+        print(f"Processing group: {group_name}")
+        if host_match in group["hosts"] or find_matching_regex(group["hosts_regex"], host_match):
             initilize_batch_list(group["batches"], identified_batch_list)
             add_metadata(group["data"].items(), metadata_set, group["name"])
             syslog.syslog(syslog.LOG_INFO, f"Host {hostname} identified in {group_name} group")
