@@ -181,6 +181,19 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set, syslog_fa
     
     interface = batch["test_interface"]
 
+    # Extract SSID from profiles
+    ssid = None
+    if "ssid_profiles" in data and len(data["ssid_profiles"]) > 0:
+        ssid = data["ssid_profiles"][0]["name"]
+
+        # Output SSID metadata to syslog
+        syslog.syslog(syslog.LOG_INFO, f"SSID: {ssid}")
+    else:
+        valid_Batch = False
+        syslog.syslog(syslog.LOG_ERR, "No SSID profiles found in configuration.")
+        print("No SSID profiles found in configuration.")
+        return batch, valid_batch
+
     # Iterate through each job in the batch
     for job_name in batch["jobs"]:
         job = next((j for j in data['jobs'] if j['name'] == job_name), None)
@@ -215,7 +228,7 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set, syslog_fa
         
         template = Template(template_str)
         iteration = job_tests.__len__()
-        transformed_data_str = template.render(job_label=job_label, tests=job_tests, iteration=iteration, parallel=parallel, interface = interface, facility = syslog_facility, continue_if = continue_if)
+        transformed_data_str = template.render(job_label=job_label, tests=job_tests, iteration=iteration, parallel=parallel, interface = interface, facility = syslog_facility, continue_if = continue_if, ssid = ssid)
         transformed_data = json.loads(transformed_data_str)
         transformed_job_list.append(transformed_data) 
     
