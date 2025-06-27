@@ -9,11 +9,12 @@
                 {% for test in tests %}
                 {
                     "schema": 2,
+                    "reference": {{ reference_data | tojson }},
                     "test": {
                         "type" : "{{ test.type }}",
                         "spec" : {
                             {% for key, value in test.spec.items() %}
-                                "{{ key }}": 
+                                "{{ key }}":
                                 {% if value is string %}
                                     "{{ value }}"
                                 {% else %}
@@ -61,7 +62,7 @@
                             }
                         }
                     ]
-                    
+
                 }{% if not loop.last %},{% endif %}
                 {% endfor %}
             ]
