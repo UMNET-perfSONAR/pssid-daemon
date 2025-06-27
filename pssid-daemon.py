@@ -178,21 +178,35 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set, syslog_fa
         syslog.syslog(syslog.LOG_ERR, f"Batch '{batch['name']}' has unresolved variables.")
         print(f"Batch '{batch['name']}' has unresolved variables.")
         return batch, valid_Batch
-    
+
     interface = batch["test_interface"]
 
     # Extract SSID from profiles
     ssid = None
+    ssid_profile = None
     if "ssid_profiles" in data and len(data["ssid_profiles"]) > 0:
-        ssid = data["ssid_profiles"][0]["name"]
+        ssid_profile = data["ssid_profiles"][0]
+        ssid = ssid_profile["name"]
 
-        # Output SSID metadata to syslog
+        # Output SSID metadata to syslog (optional, it is included now in reference data)
         syslog.syslog(syslog.LOG_INFO, f"SSID: {ssid}")
     else:
         valid_Batch = False
         syslog.syslog(syslog.LOG_ERR, "No SSID profiles found in configuration.")
         print("No SSID profiles found in configuration.")
-        return batch, valid_batch
+        return batch, valid_Batch
+
+    # Create reference data for pscheduler
+    reference_data = {
+        "SSID": ssid,
+        "batch_name": batch["name"],
+        "interface": interface,
+        "timestamp": datetime.datetime.now().isoformat()
+    }
+
+    # Add any additional metadata from the SSID profile
+    if ssid_profile and "data" in ssid_profile:
+        reference_data.update(ssid_profile["data"])
 
     # Iterate through each job in the batch
     for job_name in batch["jobs"]:
@@ -216,22 +230,32 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set, syslog_fa
                 print(f"Test '{test_name}' not found.")
                 return batch, valid_Batch
 
-            # Perform variable substitution on batch's test 
+            # Perform variable substitution on batch's test
             test, substituted = variable_substitution(test, metadata_set)
             if not substituted:
                 valid_Batch = False
                 syslog.syslog(syslog.LOG_ERR, f"Test '{test['name']}' has unresolved variables.")
                 print(f"Test '{test['name']}' has unresolved variables.")
                 return batch, valid_Batch
-  
+
             job_tests.append(test)
-        
+
         template = Template(template_str)
         iteration = job_tests.__len__()
-        transformed_data_str = template.render(job_label=job_label, tests=job_tests, iteration=iteration, parallel=parallel, interface = interface, facility = syslog_facility, continue_if = continue_if, ssid = ssid)
+        transformed_data_str = template.render(
+            job_label=job_label,
+            tests=job_tests,
+            iteration=iteration,
+            parallel=parallel,
+            interface=interface,
+            facility=syslog_facility,
+            continue_if=continue_if,
+            ssid=ssid,
+            reference_data=reference_data  # Pass the reference data to template
+        )
         transformed_data = json.loads(transformed_data_str)
-        transformed_job_list.append(transformed_data) 
-    
+        transformed_job_list.append(transformed_data)
+
     # iterate through transformed_data in batch to update boolean literals to conform python object type (later formed batch_4_batchProcessor can be directly dump to pscheduler)
     for job in transformed_job_list:
         if "parallel" in job:
@@ -239,7 +263,7 @@ def transform_job_list_for_batch_processing(batch, data, metadata_set, syslog_fa
                 job["parallel"] = True
             elif job["parallel"] == "False":
                 job["parallel"] = False
-   
+
     batch.setdefault("batch_4_batchProcessor", []).extend(transformed_job_list)
 
     return batch, valid_Batch
