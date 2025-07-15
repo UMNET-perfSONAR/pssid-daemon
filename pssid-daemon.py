@@ -489,7 +489,7 @@ def process_on_layer_2(batch, ssid_profile):
         # call layer 2 tool 
         build_layer2_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_supplicant_{ssid_profile}.conf -i {interface}"
         layer2_process = subprocess.run(build_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
-        syslog.syslog(syslog.LOG_INFO, f"pssid-80211 (SSID: {ssid_profile}): {layer2_process.stdout.strip()}")
+        syslog.syslog(syslog.LOG_INFO, f"pssid-80211: {layer2_process.stdout.strip()}")
         print(f'\n>> built layer 2')
 
     except subprocess.CalledProcessError as e:
@@ -504,7 +504,7 @@ def process_on_layer_2(batch, ssid_profile):
         # tear down l2
         teardown_layer2_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-80211 -c /etc/wpa_supplicant/wpa_supplicant_{ssid_profile}.conf -i {interface} -d"
         layer2_process = subprocess.run(teardown_layer2_tool_command, shell=True, check=True, capture_output=True, text=True)
-        syslog.syslog(syslog.LOG_INFO, f"pssid-80211 teardown (SSID: {ssid_profile}): {layer2_process.stdout.strip()}")
+        syslog.syslog(syslog.LOG_INFO, f"pssid-80211 teardown: {layer2_process.stdout.strip()}")
         print(f'\n>> tore down layer 2')
 
     except subprocess.CalledProcessError as e:
@@ -567,7 +567,7 @@ def process_on_layer_3(batch, ssid_profile):
         build_layer3_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-dhcp -i {interface} -s {ssid_profile}"
         layer3_process = subprocess.run(build_layer3_tool_command, shell=True, check=True, capture_output=True, text=True)
         print(f'\n>> built layer 3')
-        syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp (SSID: {ssid_profile}): {layer3_process.stdout.strip()}")
+        syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp: {layer3_process.stdout.strip()}")
     except subprocess.CalledProcessError as e:
         print(f"Error building layer 3")
         revert_resolv_conf_command = f"cp /tmp/resolv.conf /etc/"
@@ -611,7 +611,7 @@ def process_on_layer_3(batch, ssid_profile):
         teardown_layer3_tool_command = f"ip netns exec {namespace} /usr/lib/exec/pssid/pssid-dhcp -i {interface} -s {ssid_profile} -d"
         layer3_process = subprocess.run(teardown_layer3_tool_command, shell=True, check=True, capture_output=True, text=True)
         print(f'\n>> tore down layer 3')
-        syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp teardown (SSID: {ssid_profile}): {layer3_process.stdout.strip()}")
+        syslog.syslog(syslog.LOG_INFO, f"pssid-dhcp teardown: {layer3_process.stdout.strip()}")
     except subprocess.CalledProcessError as e:
         print(f"Error in tearing down layer 3")
         syslog.syslog(syslog.LOG_ERR, f"Error in tearing down layer 3 ")
