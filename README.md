@@ -75,7 +75,7 @@ hostnamectl set-hostname <IP>
 ```
 
 ## Ansible Bootstrapping 
-Refer to Refer to [[#Manual Bootstrapping]] if you would like to provision the probes by hand
+Refer to Refer to Manual Bootstrapping if you would like to provision the probes by hand
 > Setting up the daemon on the probes
 1. Create a working directory that will hold the ansible repos and cd into that working directory
 2. Clone the daemon repo
@@ -83,7 +83,8 @@ Refer to Refer to [[#Manual Bootstrapping]] if you would like to provision the p
 git clone https://github.com/UMNET-perfSONAR/ansible-playbook-pssid-daemon.git
 ```
 5. Edit the `hosts` files located at `ansible-playbook-pssid-daemon/inventory/hosts` to contain the IPs of your probes
-6. cd into the root of the `ansible-playbook-pssid-daemon` directory and run the following command to set up the daemon on each of the probes (NOTE: pscheduler will take a VERY long time to install, also sometimes cloning fails for no reason, just run it again)
+6. Install roles with `ansible-galaxy install -f -r requirements.yml --ignore-errors`
+7. cd into the root of the `ansible-playbook-pssid-daemon` directory and run the following command to set up the daemon on each of the probes (NOTE: pscheduler will take a VERY long time to install, also sometimes cloning fails for no reason, just run it again)
 ```
 ansible-playbook --ask-vault-pass --ask-pass --ask-become-pass --user usernamehere --become --become-user root --become-method su --inventory inventory/ playbook.yml
 ```
