@@ -1,6 +1,6 @@
 # pSSID Daemon Provisioning Documentation
 > pssid-daemon.py reads the pssid-config.json file, generates schedules based on cron expressions in the batch, and runs batches with pscheduler from perfSONAR. The daemon can be run manually or daemonized
-#### Contents
+## Contents
 <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#File Structure">File Structure</a><br>
 <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#Materials Needed">Materials Needed</a><br>
 <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#Initial Setup">Initial Setup</a><br>
@@ -21,7 +21,7 @@
 - <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#Testing Outside of Lab">Testing Outside of Lab</a>
 - <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#Remote Power Cycling + eeprom Flashing">Remote Power Cycling + eeprom Flashing</a>
 
-#### File Structure
+## File Structure
 This shows the comprehensive file structure on a RPi after configuration. 
 ```shell
 /usr/bin/pssid/
@@ -43,12 +43,12 @@ This shows the comprehensive file structure on a RPi after configuration.
 └── README.md
 ```
 
-#### Materials Needed
+## Materials Needed
 - Raspberry Pi 4
 - 64gb SD Card
 - Additional SD Card (optional, for updating eeprom)
 - Power Over Ethernet Cable (optional, varies by setup)
-#### Initial Setup 
+## Initial Setup 
 > Preparing the pi for ansible bootstrapping, configuring ssh
 1. Download Ubuntu 22.04 LTS (server edition) for the Raspberry Pi 4. This can be acquired through the official [Raspberry Pi Imaging Software](https://www.raspberrypi.com/software/) 
 2. Allow the pi to boot and log in with the default credentials `ubuntu ubuntu`
@@ -74,7 +74,7 @@ usernamehere passwd
 hostnamectl set-hostname <IP>
 ```
 
-#### Ansible Bootstrapping 
+## Ansible Bootstrapping 
 Refer to Refer to [[#Manual Bootstrapping]] if you would like to provision the probes by hand
 > Setting up the daemon on the probes
 1. Create a working directory that will hold the ansible repos and cd into that working directory
@@ -88,13 +88,13 @@ git clone https://github.com/UMNET-perfSONAR/ansible-playbook-pssid-daemon.git
 ansible-playbook --ask-vault-pass --ask-pass --ask-become-pass --user usernamehere --become --become-user root --become-method su --inventory inventory/ playbook.yml
 ```
 
-#### Manual Bootstrapping
+## Manual Bootstrapping
 1. Install pscheduler
 ```shell
 curl -s https://raw.githubusercontent.com/perfsonar/project/master/install-perfsonar \
   | sh -s - --auto-updates --tunings testpoint
 ```
-##### Syslog Configuration
+### Syslog Configuration
 By default, pssid-daemon.py uses Local0 and write to pssid.log under /var/log.
 1. Add `local0.* /var/log/pssid.log` to the end of `/etc/rsyslog.conf`
 ```shell
@@ -106,7 +106,7 @@ echo 'local0.* /var/log/pssid.log' >> /etc/rsyslog.conf
 systemctl restart rsyslog
 ```
 
-##### Network Configuration Tools
+### Network Configuration Tools
 1. Clone VT-collab tools. Copy the files inside VT-collab folder to `usr/lib/exec/pssid/`
 ```shell
 git clone https://github.com/UMNET-perfSONAR/VT-collab.git
@@ -127,14 +127,14 @@ chmod +x pssid-dhcp
 3. For testing these scripts specifically, refer to the VT-Tools repo
 4. Move the wpa_supplicant configuration file to `etc/wpa_supplicant/`. Name the file `wpa_supplicant_{ssid}.conf`, and ensure the ssid is consistent with your Wi-Fi testing environment.
 
-##### Install Additional Dependencies
+### Install Additional Dependencies
 ```shell
 apt install python3-pip
 apt install iw
 pip install croniter
 ```
 
-##### Usage
+### Usage
 1. Clone this repo and move the daemon and batch processor into `/usr/bin/pssid/`. Move the configuration file (which you will have to modify) into `/etc/pssid/`.
 ```shell
 git clone https://github.com/UMNET-perfSONAR/pssid-daemon.git
@@ -172,8 +172,8 @@ python3 pssid-daemon.py  --debug
 tail -f /var/log/pssid.log
 ```
 
-##### Manual Daemonization
->Probes running pssid-daemon program may be interrupted by provisioning. Daemonizing the program is thus necessary. 
+### Manual Daemonization
+> Probes running pssid-daemon program may be interrupted by provisioning. Daemonizing the program is thus necessary. 
 1. First, create a systemd service file, called pssid-daemon.service.
 ```shell
 cd /etc/systemd/system
@@ -202,8 +202,8 @@ systemctl status pssid-daemon.service
 systemctl enable pssid-daemon.service
 ```
 
-#### Troubleshooting
-##### Layer 2 Errors
+## Troubleshooting
+### Layer 2 Errors
 1. Start by running `wpa_supplicant` by hand and check for errors. This is what the `pssid-80211` code uses.
 ```
 wpa_supplicant -i wlan0 -c /etc/wpa_supplicant/wpa_supplicant_<SSID>.conf
@@ -220,18 +220,18 @@ ip netns delete pssid_wlan0
 ```
 5. You can alternatively choose to keep the namespace and run commands through it like this `ip netns exec pssid_wlan0 command_here`
 6. Rerun the `wpa_supplicant` command, there might be a problem with the config syntax
-##### Editing WPA Config
+### Editing WPA Config
 1. If it is just the formatting that needs to be changed, that can be done by modifying `ansible-playbook-pssid-daemon/roles/ansible-role-pssid-VT-tools/templates/wpa_supplicant.conf.j2`
 2. If actual variable values need to be changed, you need the vault password and can edit the file `ansible-playbook-pssid-daemon/roles/ansible-role-pssid-VT-tools/defaults/wpa_supplicant_profiles.yml` with the following command
 ```
 ansible-vault edit ansible-playbook-pssid-daemon/roles/ansible-role-pssid-VT-tools/defaults/wpa_supplicant_profiles.yml
 ```
 3. Enter insert mode to edit with `i` and write your changes and exit with `esc` followed by `:wq`
-##### Layer 3 Errors
+### Layer 3 Errors
 1. These are usually layer 2 errors that weren't caught because layer 2 has marginally unhelpful error output and false positives
 2. Especially if the error has something to do with a time out waiting for a carrier, it is most likely a layer 2 issue
 3. If it truly is layer 3, double check to ensure that both `pssid-80211` and `pssid-dhcp` are executable (you can check with `ls -la` and modify with `chmod +x <file>`)
-##### Service Not Starting (Restart Limit)
+### Service Not Starting (Restart Limit)
 1. This is usually because something is preventing the daemon from running correctly, and systemctl restarts it multiple times in quick succession as essentially gets rate limited by its own configuration
 2. Run the daemon code by hand to see if there is any error output
 ```
@@ -239,15 +239,15 @@ cd /usr/bin/pssid
 python3 pssid-daemon.py
 ```
 3. A common issue is forgetting to set the hostname to be the IP. Since the service file does not include a hostname parameter for replicability (though it is an option) the hostname is assumed to be the IP
-##### IP Not Found in Host Group
+### IP Not Found in Host Group
 1. This just means that the IP was not assigned any tasks in the configuration file
 2. Go to `/etc/pssid/pssid_config.json` and edit it by hand or through the web GUI to add tasks for the probe specifically
-##### Testing Outside of Lab
+### Testing Outside of Lab
 1. You will need a router of some sort and a POE switch
 2. Power on the router, connect your laptop to the router's wifi, connect the routers LAN to the POE switch, and connect the pi to the POE switch as well
 3. The pi should show up on your router's dashboard as a device which will tell you the IP and allow for ssh
 4. This is mostly helpful for armed pis that do not have any ports exposed (no hdmi out or keyboard access)
-##### Remote Power Cycling + eeprom Flashing
+### Remote Power Cycling + eeprom Flashing
 1. Testing new features over ssh that have the potential to break ssh access and make the pi unusable if it's remote
 2. Setup power cycling timers (the below is a reboot in 5 minutes):
 ```
