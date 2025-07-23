@@ -50,7 +50,7 @@ This shows the comprehensive file structure on a RPi after configuration.
 - Power Over Ethernet Cable (optional, varies by setup)
 ## Initial Setup 
 > Preparing the pi for ansible bootstrapping, configuring ssh
-1. Download Ubuntu 22.04 LTS (server edition) for the Raspberry Pi 4. This can be acquired through the official [Raspberry Pi Imaging Software](https://www.raspberrypi.com/software/) 
+1. Download Ubuntu 22.04 or 24 LTS (server edition) for the Raspberry Pi 4. This can be acquired through the official [Raspberry Pi Imaging Software](https://www.raspberrypi.com/software/) 
 2. Allow the pi to boot and log in with the default credentials `ubuntu ubuntu`
 3. To access the pi over ssh, go to `/etc/ssh/sshd_config.d/` and make sure the files in this directory has password authentication enabled
 ```
@@ -58,17 +58,13 @@ PasswordAuth yes
 ```
 
 4. Create a root password (by typing `passwd` as the root user) and reboot the pi, this time logging in as root (ensures there are no problems with the next steps)
-5. Remove the ubuntu user
-```
-deluser --remove-home ubuntu
-```
-
-6. Create a new user account, which will be used with ansible bootstrapping, and set a password
+5. Create a new user account, which will be used with ansible bootstrapping, and set a password
 ```
 useradd -m usernamehere
 usernamehere passwd
 ```
 
+6. Disable the ubuntu user by modifying `/etc/passwd` and changing the shell to `/usr/bin/false `
 7. Change the hostname to be the IP of the pi (helps with avoiding errors with the daemon later)
 ```
 hostnamectl set-hostname <IP>
@@ -88,6 +84,7 @@ git clone https://github.com/UMNET-perfSONAR/ansible-playbook-pssid-daemon.git
 ```
 ansible-playbook --ask-vault-pass --ask-pass --ask-become-pass --user usernamehere --become --become-user root --become-method su --inventory inventory/ playbook.yml
 ```
+8. The configuartion file is located on the pi at `/etc/pssid/pssid_config.json` needs to be sourced from the web server after being generated in the web interface. This file is located at `/var/lib/pssid/output/pssid_config.json`
 
 ## Manual Bootstrapping
 1. Install pscheduler
@@ -136,7 +133,7 @@ pip install croniter
 ```
 
 ### Usage
-1. Clone this repo and move the daemon and batch processor into `/usr/bin/pssid/`. Move the configuration file (which you will have to modify) into `/etc/pssid/`.
+1. Clone this repo and move the daemon and batch processor into `/usr/bin/pssid/`. Move the default configuration file into `/etc/pssid/`. A custom configuration file can be generated in the web interface. This customized file is located at `/var/lib/pssid/output/pssid_config.json` on the web server after generation.
 ```shell
 git clone https://github.com/UMNET-perfSONAR/pssid-daemon.git
 ```
