@@ -61,7 +61,7 @@ PasswordAuth yes
 5. Create a new user account, which will be used with ansible bootstrapping, and set a password
 ```
 useradd -m usernamehere
-usernamehere passwd
+passwd usernamehere
 ```
 
 6. Disable the ubuntu user by modifying `/etc/passwd` and changing the shell to `/usr/bin/false `
