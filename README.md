@@ -70,12 +70,16 @@ git clone https://github.com/UMNET-perfSONAR/ansible-playbook-pssid-daemon.git
 ```shell
 ansible-galaxy install -f -r requirements.yml --ignore-errors
 ```
-5. cd into the root of the `ansible-playbook-pssid-daemon` directory and run the following command to set up the daemon on each of the probes (NOTE: pscheduler will take a VERY long time to install, also sometimes cloning fails for no reason, just run it again)
+5. cd into the root of the `ansible-playbook-pssid-daemon` directory and run the following command to ensure the host is reachable by ansible
+```shell
+ansible <host-pattern> -m ping
+```
+6. set up the daemon on each of the probes (NOTE: pscheduler will take a VERY long time to install, also sometimes cloning fails for no reason, just run it again)
 ```
 ansible-playbook --ask-vault-pass --ask-pass --ask-become-pass --user usernamehere --become --become-user root --become-method su --inventory inventory/ playbook.yml
 ```
-6. The configuration file is located on the pi at `/etc/pssid/pssid_config.json` needs to be sourced from the web server after being generated in the web interface. This file is located at `/var/lib/pssid/output/pssid_config.json`
-7. The `wpa_supplicant` configuration file will likely have to be modified or created to customize. An example of an eduroam configuration is below:
+7. The configuration file is located on the pi at `/etc/pssid/pssid_config.json` needs to be sourced from the web server after being generated in the web interface. This file is located at `/var/lib/pssid/output/pssid_config.json`
+8. The `wpa_supplicant` configuration file will likely have to be modified or created to customize. An example of an eduroam configuration is below:
 ```
 ctrl_interface=/var/run/wpa_supplicant
 
