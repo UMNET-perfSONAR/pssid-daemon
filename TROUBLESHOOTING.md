@@ -1,14 +1,3 @@
-### Troubleshooting the Daemon
-<a href="https://github.com/UMNET-perfSONAR/pssid-daemon#Troubleshooting">Troubleshooting</a>
-- <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#Layer 2 Errors">Layer 2 Errors</a>
-- <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#Editing WPA Config">Editing WPA Config</a>
-- <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#Layer 3 Errors">Layer 3 Errors</a>
-- <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#Service Not Starting (Restart Limit)">Service Not Starting (Restart Limit)</a>
-- <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#IP Not Found in Host Group">IP Not Found in Host Group</a>
-- <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#Testing Outside of Lab">Testing Outside of Lab</a>
-- <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#Remote Power Cycling + eeprom Flashing">Remote Power Cycling + eeprom Flashing</a>
-
-
 ## Troubleshooting
 ### Layer 2 Errors
 1. Start by running `wpa_supplicant` by hand and check for errors. This is what the `pssid-80211` code uses.
