@@ -5,8 +5,9 @@
 <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#Materials Needed">Materials Needed</a><br>
 <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#Initial Setup">Initial Setup</a><br>
 <a href="https://github.com/UMNET-perfSONAR/pssid-daemon#Ansible Bootstrapping">Ansible Bootstrapping</a><br>
+- Example EduRoam WPA_Supplicant configuration file
 
-See Also: <a href="https://github.com/UMNET-perfSONAR/pssid-daemon/blob/main/TROUBLESHOOTING.md">Troubleshooting</a>
+See Also: <a href="https://github.com/UMNET-perfSONAR/pssid-daemon/blob/main/TROUBLESHOOTING.md">Troubleshooting</a> and <a href="https://github.com/UMNET-perfSONAR/pssid-daemon/blob/main/MANUAL_BOOTSTRAPPING.md">Manual Bootstrapping</a>
 ## File Structure
 This shows the comprehensive file structure on a RPi after configuration. 
 ```shell
@@ -73,5 +74,21 @@ ansible-galaxy install -f -r requirements.yml --ignore-errors
 ```
 ansible-playbook --ask-vault-pass --ask-pass --ask-become-pass --user usernamehere --become --become-user root --become-method su --inventory inventory/ playbook.yml
 ```
-6. The configuartion file is located on the pi at `/etc/pssid/pssid_config.json` needs to be sourced from the web server after being generated in the web interface. This file is located at `/var/lib/pssid/output/pssid_config.json`
+6. The configuration file is located on the pi at `/etc/pssid/pssid_config.json` needs to be sourced from the web server after being generated in the web interface. This file is located at `/var/lib/pssid/output/pssid_config.json`
+7. The `wpa_supplicant` configuration file will likely have to be modified or created to customize. An example of an eduroam configuration is below:
+```
+ctrl_interface=/var/run/wpa_supplicant
+
+network={
+ ssid="eduroam"
+ key_mgmt=WPA-EAP
+ eap=PEAP
+ proto=RSN
+ pairwise=CCMP
+ group=CCMP
+ phase2="autheap=MSCHAPV2"
+ identity="you_user"
+ password="your_pass"
+}
+```
 
